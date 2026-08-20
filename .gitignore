@@ -174,3 +174,6 @@ poetry.toml
 pyrightconfig.json
 
 # End of https://www.toptal.com/developers/gitignore/api/python
+
+# Duolingo raw dataset (local input only; never commit the 1.22 GiB source file)
+data/learning_traces.13m.csv
