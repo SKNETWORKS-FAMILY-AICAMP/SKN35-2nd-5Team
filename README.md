@@ -31,3 +31,71 @@ GitHub 단일 파일 제한을 넘지 않도록 원천 행동 로그는 결정�
 
 실제 정답 키는 KT4 로그에 없으므로 정답률은 제공하지 않습니다.
 `obs_response_with_answer_rate`는 답변 값이 기록된 응답 비율이며 정답률이 아닙니다.
+
+## Streamlit 대시보드
+
+저장소 루트의 `app.py`가 Streamlit 진입점입니다.
+
+```powershell
+streamlit run app.py
+```
+
+Streamlit Community Cloud의 **Main file path**도 `app.py`로 지정합니다.
+대시보드는 `ML/results/all_metrics.json`의 Decision Tree, Random Forest,
+XGBoost, LightGBM 평가 결과를 시각화합니다.
+
+## 목표 프로젝트 구조 (Roadmap)
+
+아래 구조는 데이터 분석부터 모델 학습, 설명, 리텐션 액션까지 확장하기 위한
+최종 목표 구조입니다. 현재 저장소는 이 구조로 단계적으로 전환 중입니다.
+
+```text
+SKN35-2nd-5Team/
+├─ app.py                                   # 🎯 메인 대시보드 엔트리포인트
+├─ README.md
+├─ pyproject.toml
+├─ .gitignore
+├─ data/                                    # 💾 정제된 핵심 데이터셋 (약 66 MB)
+│  ├─ churn_modeling_features.csv           # ML/DL 모델링 전용 피처셋 (23,789 × 35)
+│  ├─ ednet_payment_users.csv               # 결제 고객 행동 로그 통합본
+│  └─ kt4_payment_transactions.csv          # 결제/환불 원천 트랜잭션
+├─ artifacts/                               # 📦 모델/결과물/시각화 아티팩트
+│  ├─ processed/                            # 처리된 중간 데이터 (.gitkeep)
+│  ├─ models/
+│  │  ├─ ml/                                # Decision Tree, Random Forest, XGBoost, LightGBM (.joblib)
+│  │  └─ dl/                                # MLP (.joblib)
+│  ├─ figures/                              # 차트 이미지 (.gitkeep)
+│  └─ results/                              # ml_metrics.json, dl_metrics.json
+├─ src/                                     # 🧩 핵심 소스코드 패키지
+│  ├─ data/                                 # loader.py, validator.py
+│  ├─ analysis/                             # eda.py
+│  ├─ features/                             # churn.py, feature_engineering.py
+│  ├─ clustering/                           # kmeans.py
+│  ├─ ml/                                   # ML 모델, trainer.py, evaluate.py
+│  ├─ dl/                                   # mlp.py, trainer.py, evaluate.py
+│  ├─ comparison/                           # model_comparison.py
+│  ├─ explain/                              # shap_analysis.py
+│  ├─ retention/                            # risk_type.py, llm_client.py, retention_action.py
+│  └─ utils/                                # constants.py, paths.py
+├─ pages/                                   # 🖥️ Streamlit 9단계 멀티페이지 UI
+│  ├─ 01_EDA.py                             # 01. 탐색적 데이터 분석
+│  ├─ 02_Churn_Definition.py                # 02. 이탈 기준 및 타깃 정의
+│  ├─ 03_Feature_Engineering.py             # 03. 피처 생성 및 상관관계
+│  ├─ 04_User_Clustering.py                 # 04. 고객 행동 군집 분석
+│  ├─ 05_ML_Training.py                     # 05. ML 4종 모델 학습 및 평가
+│  ├─ 06_DL_Training.py                     # 06. 딥러닝(MLP) 모델 학습 및 평가
+│  ├─ 07_Model_Comparison.py                # 07. 모델 종합 벤치마크 (ROC/PR Curve)
+│  ├─ 08_SHAP_Analysis.py                   # 08. 모델 해석 및 중요 피처 분석
+│  └─ 09_Retention_Action.py                # 09. 맞춤형 리텐션 액션 & LLM CRM 생성
+├─ scripts/                                 # ⚡ CLI 일괄 실행 스크립트
+│  ├─ run_eda.py
+│  ├─ run_clustering.py
+│  ├─ train_ml.py                           # ML 4종 일괄 학습
+│  ├─ train_dl.py                           # DL 일괄 학습
+│  └─ evaluate_models.py                    # 모델 랭킹 리더보드 출력
+└─ tests/                                   # 🧪 단위 테스트 슈트 (목표: 100% Pass)
+   ├─ fixtures.py
+   ├─ test_data.py
+   ├─ test_churn.py
+   └─ test_features.py
+```
