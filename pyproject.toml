@@ -16,4 +16,5 @@ dependencies = [
     "xgboost>=3.4.1",
     "lightgbm>=4.6.0",
     "joblib>=1.5.1",
+    "optuna>=4.5.0",
 ]
