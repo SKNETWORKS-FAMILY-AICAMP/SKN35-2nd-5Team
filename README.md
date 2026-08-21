@@ -31,31 +31,3 @@ GitHub 단일 파일 제한을 넘지 않도록 원천 행동 로그는 결정�
 
 실제 정답 키는 KT4 로그에 없으므로 정답률은 제공하지 않습니다.
 `obs_response_with_answer_rate`는 답변 값이 기록된 응답 비율이며 정답률이 아닙니다.
-
-### 검증
-
-다음 명령으로 GitHub 크기 제한, 고객 수, 정렬, 라벨 분포 및 모든 결제 관련
-이벤트 보존 여부를 다시 검사할 수 있습니다.
-
-```powershell
-python scripts/verify_sampled_dataset.py
-```
-
-검증 결과는 `data/dataset_integrity_report.json`에 기록됩니다.
-대용량 전체본을 삭제하기 전에 수행한 72,875,338행 전수 검증 결과는
-`data/full_extraction_integrity_report.json`에 보존돼 있습니다.
-
-### 전체 데이터 재생성
-
-원본 `KT4/`를 별도로 복구한 환경에서만 전체 재생성이 가능합니다.
-
-```powershell
-python scripts/build_consolidated_datasets.py
-python scripts/verify_dataset_integrity.py
-python scripts/downsample_payment_events.py
-python scripts/verify_sampled_dataset.py
-```
-
-첫 두 명령은 Git에 올리지 않는 `data/ednet_payment_users_full.csv`를 만들고
-검증합니다. 세 번째 명령이 100 MB 미만의 최종
-`data/ednet_payment_users.csv`를 생성합니다.
