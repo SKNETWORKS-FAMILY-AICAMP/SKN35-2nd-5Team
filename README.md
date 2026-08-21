@@ -32,19 +32,8 @@ GitHub 단일 파일 제한을 넘지 않도록 원천 행동 로그는 결정�
 실제 정답 키는 KT4 로그에 없으므로 정답률은 제공하지 않습니다.
 `obs_response_with_answer_rate`는 답변 값이 기록된 응답 비율이며 정답률이 아닙니다.
 
-## Streamlit 대시보드
 
-저장소 루트의 `app.py`가 Streamlit 진입점입니다.
-
-```powershell
-streamlit run app.py
-```
-
-Streamlit Community Cloud의 **Main file path**도 `app.py`로 지정합니다.
-대시보드는 `ML/results/all_metrics.json`의 Decision Tree, Random Forest,
-XGBoost, LightGBM 평가 결과를 시각화합니다.
-
-## 목표 프로젝트 구조 (Roadmap)
+## 프로젝트 구조 (Roadmap)
 
 아래 구조는 데이터 분석부터 모델 학습, 설명, 리텐션 액션까지 확장하기 위한
 최종 목표 구조입니다. 현재 저장소는 이 구조로 단계적으로 전환 중입니다.
