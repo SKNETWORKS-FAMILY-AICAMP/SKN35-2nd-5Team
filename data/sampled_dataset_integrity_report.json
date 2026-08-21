@@ -1,0 +1,30 @@
+{
+  "actual_payment_transactions": 27781,
+  "checks": {
+    "all_feature_users_in_sample": true,
+    "all_payment_transactions_retained": true,
+    "every_user_has_sampled_rows": true,
+    "feature_label_distribution": true,
+    "feature_user_count": true,
+    "feature_users_unique": true,
+    "file_is_below_max_bytes": true,
+    "no_unexpected_payment_transactions": true,
+    "rows_well_formed": true,
+    "sorted_by_user_and_timestamp": true,
+    "weights_valid": true
+  },
+  "expected_payment_transactions": 27781,
+  "feature_label_distribution": {
+    "0": 2174,
+    "1": 21615
+  },
+  "invalid_row_count": 0,
+  "invalid_weight_count": 0,
+  "missing_payment_transaction_count": 0,
+  "order_error_count": 0,
+  "passed": true,
+  "sample_file_bytes": 60659867,
+  "sample_rows": 1007413,
+  "sample_users": 23789,
+  "unexpected_payment_transaction_count": 0
+}

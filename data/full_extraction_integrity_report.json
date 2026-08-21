@@ -1,0 +1,64 @@
+{
+  "actual": {
+    "feature_churn_distribution": {
+      "0": 2174,
+      "1": 21615
+    },
+    "feature_columns": 35,
+    "feature_file_bytes": 3326682,
+    "feature_users": 23789,
+    "raw": {
+      "invalid_row_count": 0,
+      "order_error_count": 0,
+      "pay_action_user_count": 23789,
+      "row_count": 72875338,
+      "row_count_mismatch_count": 0,
+      "sample_invalid_rows": [],
+      "sample_order_errors": [],
+      "sample_row_count_mismatches": {},
+      "sample_unexpected_users": [],
+      "unexpected_user_count": 0,
+      "unique_user_count": 23789
+    },
+    "raw_file_bytes": 3884650406,
+    "summary_churn_distribution": {
+      "0": 2174,
+      "1": 21615
+    },
+    "summary_events": 72875338,
+    "summary_users": 23789,
+    "transaction_pay_users": 23789
+  },
+  "checks": {
+    "feature_churn_distribution": true,
+    "feature_has_no_future_summary_leakage": true,
+    "feature_labels_match_summary": true,
+    "feature_unique_users": true,
+    "feature_user_count": true,
+    "feature_user_order": true,
+    "feature_user_set_matches_summary": true,
+    "raw_all_users_have_pay_action": true,
+    "raw_event_count": true,
+    "raw_has_no_unexpected_users": true,
+    "raw_per_user_counts_match_summary": true,
+    "raw_rows_well_formed": true,
+    "raw_sorted_by_user_and_timestamp": true,
+    "raw_user_count": true,
+    "raw_user_set_matches_summary": true,
+    "summary_churn_distribution": true,
+    "summary_event_count": true,
+    "summary_user_count": true,
+    "transaction_pay_users_match_summary": true
+  },
+  "expected": {
+    "churn_distribution": {
+      "0": 2174,
+      "1": 21615
+    },
+    "events": 72875338,
+    "users": 23789
+  },
+  "label_mismatch_count": 0,
+  "passed": true,
+  "sample_label_mismatches": {}
+}

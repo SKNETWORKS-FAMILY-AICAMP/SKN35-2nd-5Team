@@ -1,0 +1,97 @@
+{
+  "creates_integrated_csv": false,
+  "window_days": 30,
+  "boundaries_are_inclusive": true,
+  "definitions": {
+    "pay_and_refund": "first_refund - 30 days through first_refund",
+    "pay_only": "last_pay through last_pay + 30 days",
+    "refund_only": "first_refund - 30 days through first_refund; kept separate and excluded from the learning-candidate totals"
+  },
+  "groups": {
+    "pay_and_refund": {
+      "users": 1096,
+      "window_rows": 524491,
+      "estimated_csv_bytes": 43641347,
+      "estimated_csv_size": "41.620 MiB",
+      "source_lifetime_rows": 2580252,
+      "retained_row_ratio": 0.20327123087202334,
+      "users_with_anchor_event_retained": 1096,
+      "invalid_timestamp_rows_excluded": 0
+    },
+    "pay_only": {
+      "users": 22693,
+      "window_rows": 35333654,
+      "estimated_csv_bytes": 2943095300,
+      "estimated_csv_size": "2.741 GiB",
+      "source_lifetime_rows": 70295086,
+      "retained_row_ratio": 0.5026475677119165,
+      "users_with_anchor_event_retained": 22693,
+      "invalid_timestamp_rows_excluded": 0
+    },
+    "refund_only": {
+      "users": 0,
+      "window_rows": 0,
+      "estimated_csv_bytes": 0,
+      "estimated_csv_size": "0.000 MiB",
+      "source_lifetime_rows": 0,
+      "retained_row_ratio": null,
+      "users_with_anchor_event_retained": 0,
+      "invalid_timestamp_rows_excluded": 0
+    }
+  },
+  "learning_candidates": {
+    "included_groups": [
+      "pay_and_refund",
+      "pay_only"
+    ],
+    "users": 23789,
+    "rows": 35858145,
+    "estimated_csv_bytes": 2986736559,
+    "estimated_csv_size": "2.782 GiB"
+  },
+  "refund_only_separate": {
+    "users": 0,
+    "rows": 0,
+    "estimated_csv_bytes": 0,
+    "estimated_csv_size": "0.000 MiB"
+  },
+  "all_bounded_outputs": {
+    "users": 23789,
+    "rows": 35858145,
+    "estimated_csv_bytes": 2986736559,
+    "estimated_csv_size": "2.782 GiB",
+    "selected_lifetime_rows": 72875338,
+    "retained_row_ratio": 0.4920477349964401
+  },
+  "pay_refund_sequence_context": {
+    "pay_then_refund_users": 1096,
+    "refund_before_first_pay_users": 0
+  },
+  "timestamp_unit_counts": {
+    "ms": 72875338
+  },
+  "source_schemas": [
+    [
+      "timestamp",
+      "action_type",
+      "item_id",
+      "cursor_time",
+      "source",
+      "user_answer",
+      "platform"
+    ]
+  ],
+  "union_output_columns": [
+    "user_id",
+    "timestamp",
+    "action_type",
+    "item_id",
+    "cursor_time",
+    "source",
+    "user_answer",
+    "platform",
+    "datetime"
+  ],
+  "users_without_valid_anchor": [],
+  "failures": []
+}

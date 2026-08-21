@@ -1,0 +1,40 @@
+{
+  "byte_reduction_ratio": 0.984384729471072,
+  "critical_actions_always_retained": [
+    "enroll_coupon",
+    "pay",
+    "refund"
+  ],
+  "max_bytes": 95000000,
+  "method": "deterministic_even_sampling_by_user_and_payment_period",
+  "normal_event_quotas_per_user": {
+    "observation": 30,
+    "post": 15,
+    "pre": 15
+  },
+  "observation_window_days": 14,
+  "row_reduction_ratio": 0.9861762150592015,
+  "sample": {
+    "bytes": 60659867,
+    "label_distribution": {
+      "0": 2174,
+      "1": 21615
+    },
+    "path": "D:\\SK_encoa\\SKN35-2nd-5Team\\data\\ednet_payment_users_sampled.csv",
+    "rows": 1007413,
+    "selected_counts": {
+      "critical": 27781,
+      "observation": 608267,
+      "post": 226362,
+      "pre": 145003
+    },
+    "users": 23789
+  },
+  "sample_weight_semantics": "1 for pay/refund/enroll_coupon; otherwise source normal-event count divided by selected normal-event count within the user's period",
+  "source": {
+    "bytes": 3884650406,
+    "path": "D:\\SK_encoa\\SKN35-2nd-5Team\\data\\ednet_payment_users.csv",
+    "rows": 72875338,
+    "users": 23789
+  }
+}

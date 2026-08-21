@@ -1,62 +1,61 @@
 # SKN35-2nd-5Team
 
-## Duolingo 데이터셋 준비
+## KT4 결제 고객 이탈 모델링 데이터셋
 
-대용량 원본 로그를 사용자 단위로 축소한 최종 데이터셋은 다음 경로에 있습니다.
+대용량 KT4 원본에서 결제 고객 23,789명의 모델링 데이터를 추출했습니다.
+GitHub 단일 파일 제한을 넘지 않도록 원천 행동 로그는 결정론적 가중 샘플로
+축소했고, 모델 학습용 집계 피처는 전체 로그에서 계산한 값을 보존했습니다.
 
-```text
-data/duolingo_churn_dataset.csv
+### 최종 데이터
+
+| 파일 | 내용 | 크기 |
+|---|---|---:|
+| `data/ednet_payment_users.csv` | 결제 고객 전원의 가중 행동 로그 샘플 1,007,413행 | 60.66 MB |
+| `data/churn_modeling_features.csv` | 전체 로그 기반 14일 관측 피처 23,789행 × 35열 | 3.33 MB |
+| `data/kt4_pass_expiry_repurchase_analysis.csv` | 이탈·재결제 라벨 요약 | 2.50 MB |
+| `data/kt4_payment_transactions.csv` | 결제·환불·쿠폰 등록 트랜잭션 | 1.99 MB |
+
+이탈 라벨 분포는 이탈 21,615명, 유지 2,174명입니다. `pay-only`는 유지 고객을
+뜻하지 않습니다. 환불 없이 결제한 고객을 의미하며, pay-only 22,693명 중
+20,519명은 비갱신 이탈 고객입니다.
+
+### 행동 로그 샘플링
+
+최종 행동 로그는 각 고객의 이벤트를 최초 결제 전, 결제 후 14일 관측 구간,
+그 이후로 나눠 각각 최대 15개, 30개, 15개 일반 이벤트를 시간축에 균등하게
+선택합니다. `pay`, `refund`, `enroll_coupon` 이벤트 27,781건은 전부 보존합니다.
+
+`sample_weight`는 선택된 일반 이벤트가 같은 고객·기간 구간의 원본 이벤트를
+몇 건 대표하는지 나타냅니다. 결제 관련 핵심 이벤트의 가중치는 1입니다.
+이벤트 단위 통계를 학습에 사용할 때는 이 값을 표본 가중치로 사용할 수 있습니다.
+
+실제 정답 키는 KT4 로그에 없으므로 정답률은 제공하지 않습니다.
+`obs_response_with_answer_rate`는 답변 값이 기록된 응답 비율이며 정답률이 아닙니다.
+
+### 검증
+
+다음 명령으로 GitHub 크기 제한, 고객 수, 정렬, 라벨 분포 및 모든 결제 관련
+이벤트 보존 여부를 다시 검사할 수 있습니다.
+
+```powershell
+python scripts/verify_sampled_dataset.py
 ```
 
-이 파일은 GitHub의 일반 파일 크기 제한을 초과하므로 **Git LFS**로 관리합니다.
-CSV는 행 단위로 임의 추출하지 않았으며, 선정된 사용자의 전체 학습 기록을
-`user_id`, `timestamp` 순으로 보존합니다.
+검증 결과는 `data/dataset_integrity_report.json`에 기록됩니다.
+대용량 전체본을 삭제하기 전에 수행한 72,875,338행 전수 검증 결과는
+`data/full_extraction_integrity_report.json`에 보존돼 있습니다.
 
-### 최초 1회 설정
+### 전체 데이터 재생성
 
-Git LFS를 설치한 뒤 저장소별로 다음 명령을 실행합니다.
+원본 `KT4/`를 별도로 복구한 환경에서만 전체 재생성이 가능합니다.
 
-```bash
-git lfs install
+```powershell
+python scripts/build_consolidated_datasets.py
+python scripts/verify_dataset_integrity.py
+python scripts/downsample_payment_events.py
+python scripts/verify_sampled_dataset.py
 ```
 
-Windows에서 Git LFS가 설치되어 있는지는 다음 명령으로 확인할 수 있습니다.
-
-```bash
-git lfs version
-```
-
-### 저장소 클론 및 데이터 다운로드
-
-Git LFS가 설치된 상태에서 저장소를 평소처럼 클론하면 CSV도 함께 다운로드됩니다.
-
-```bash
-git clone https://github.com/SKNETWORKS-FAMILY-AICAMP/SKN35-2nd-5Team.git
-cd SKN35-2nd-5Team
-git lfs pull
-```
-
-CSV 대신 몇 줄짜리 LFS 포인터 파일만 보이는 경우 다음 명령을 실행합니다.
-
-```bash
-git lfs install
-git lfs pull
-```
-
-현재 LFS로 관리되는 파일은 다음 명령으로 확인할 수 있습니다.
-
-```bash
-git lfs ls-files
-```
-
-### 데이터셋 재생성
-
-원본 `data/learning_traces.13m.csv`가 있을 때 다음 명령으로 동일한 방식의
-축소 데이터셋을 재생성할 수 있습니다.
-
-```bash
-uv run python prepare_duolingo_dataset.py --output data/duolingo_churn_dataset.csv
-```
-
-원본 CSV는 용량이 매우 크므로 Git에 추가하지 않습니다. 재생성된 최종 CSV는
-반드시 위 경로에 저장하여 기존 Git LFS 추적 규칙을 적용합니다.
+첫 두 명령은 Git에 올리지 않는 `data/ednet_payment_users_full.csv`를 만들고
+검증합니다. 세 번째 명령이 100 MB 미만의 최종
+`data/ednet_payment_users.csv`를 생성합니다.

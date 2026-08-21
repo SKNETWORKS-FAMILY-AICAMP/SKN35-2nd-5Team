@@ -177,3 +177,11 @@ pyrightconfig.json
 
 # Duolingo raw dataset (local input only; never commit the 1.22 GiB source file)
 data/learning_traces.13m.csv
+
+# KT4 extraction inputs and restart artifacts (never commit)
+KT4/
+data/ednet_payment_users_full.csv
+data/.consolidated_payment_chunks/
+data/*.partial
+data/*.manifest.tmp
+data/*.building
