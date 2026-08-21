@@ -1,0 +1,241 @@
+{
+  "creates_final_csv": false,
+  "creates_feature_dataset": false,
+  "creates_label_file": false,
+  "performs_sampling": false,
+  "analysis_unit": "one candidate per pay user anchored at first_pay",
+  "classification_rules": {
+    "feature_interval": "inclusive pay anchor, exclusive prediction point",
+    "feature_refund": "refund inside feature interval is excluded as an early outcome",
+    "positive": "refund in [prediction point, outcome end]",
+    "non_refund": "no refund in outcome and outcome end is not later than global data end",
+    "right_censored": "no observed outcome refund and outcome end is later than global data end"
+  },
+  "global_data_end": "2019-12-01T21:15:34.502+00:00",
+  "global_data_end_unix_seconds": 1575234934.502,
+  "pay_frequency": {
+    "one_pay_users": 21286,
+    "two_pay_users": 2253,
+    "three_or_more_pay_users": 250,
+    "maximum_pay_count": 6,
+    "total_payment_episodes": 26583
+  },
+  "refund_only_users_excluded": 0,
+  "first_pay_user_results": [
+    {
+      "observation_days": 7,
+      "outcome_days": 14,
+      "total_pay_users": 23789,
+      "eligible_users": 22120,
+      "refund_users": 127,
+      "non_refund_users": 21993,
+      "positive_rate": 0.005741410488245931,
+      "refund_during_feature_excluded": 715,
+      "observation_window_incomplete": 205,
+      "right_censored": 749,
+      "feature_zero_learning_events": 3344,
+      "feature_fewer_than_10_learning_events": 3797,
+      "active_days": {
+        "count": 22120,
+        "mean": 2.918128390596745,
+        "median": 3.0,
+        "min": 0.0,
+        "max": 8.0
+      },
+      "learning_event_count": {
+        "count": 22120,
+        "mean": 700.5807866184448,
+        "median": 297.5,
+        "min": 0.0,
+        "max": 26455.0
+      },
+      "estimated_raw_log_rows": 15519012,
+      "estimated_raw_log_bytes": 1293136976,
+      "estimated_raw_log_size": "1.204 GiB",
+      "positive_raw_log_rows": 59170,
+      "non_refund_raw_log_rows": 15459842,
+      "accounting_check": true
+    },
+    {
+      "observation_days": 14,
+      "outcome_days": 30,
+      "total_pay_users": 23789,
+      "eligible_users": 21207,
+      "refund_users": 101,
+      "non_refund_users": 21106,
+      "positive_rate": 0.004762578393926534,
+      "refund_during_feature_excluded": 809,
+      "observation_window_incomplete": 572,
+      "right_censored": 1201,
+      "feature_zero_learning_events": 2407,
+      "feature_fewer_than_10_learning_events": 2821,
+      "active_days": {
+        "count": 21207,
+        "mean": 4.6069693968972505,
+        "median": 4.0,
+        "min": 0.0,
+        "max": 15.0
+      },
+      "learning_event_count": {
+        "count": 21207,
+        "mean": 1086.9001744706936,
+        "median": 438.0,
+        "min": 0.0,
+        "max": 46074.0
+      },
+      "estimated_raw_log_rows": 23071139,
+      "estimated_raw_log_bytes": 1921923577,
+      "estimated_raw_log_size": "1.790 GiB",
+      "positive_raw_log_rows": 61001,
+      "non_refund_raw_log_rows": 23010138,
+      "accounting_check": true
+    },
+    {
+      "observation_days": 14,
+      "outcome_days": 60,
+      "total_pay_users": 23789,
+      "eligible_users": 20030,
+      "refund_users": 161,
+      "non_refund_users": 19869,
+      "positive_rate": 0.008037943085371943,
+      "refund_during_feature_excluded": 809,
+      "observation_window_incomplete": 572,
+      "right_censored": 2378,
+      "feature_zero_learning_events": 2284,
+      "feature_fewer_than_10_learning_events": 2665,
+      "active_days": {
+        "count": 20030,
+        "mean": 4.6311033449825265,
+        "median": 4.0,
+        "min": 0.0,
+        "max": 15.0
+      },
+      "learning_event_count": {
+        "count": 20030,
+        "mean": 1100.9350474288567,
+        "median": 448.0,
+        "min": 0.0,
+        "max": 46074.0
+      },
+      "estimated_raw_log_rows": 22071795,
+      "estimated_raw_log_bytes": 1838172505,
+      "estimated_raw_log_size": "1.712 GiB",
+      "positive_raw_log_rows": 135658,
+      "non_refund_raw_log_rows": 21936137,
+      "accounting_check": true
+    },
+    {
+      "observation_days": 30,
+      "outcome_days": 30,
+      "total_pay_users": 23789,
+      "eligible_users": 20605,
+      "refund_users": 78,
+      "non_refund_users": 20527,
+      "positive_rate": 0.0037854889589905363,
+      "refund_during_feature_excluded": 878,
+      "observation_window_incomplete": 1274,
+      "right_censored": 1032,
+      "feature_zero_learning_events": 1633,
+      "feature_fewer_than_10_learning_events": 1986,
+      "active_days": {
+        "count": 20605,
+        "mean": 7.356661004610531,
+        "median": 5.0,
+        "min": 0.0,
+        "max": 31.0
+      },
+      "learning_event_count": {
+        "count": 20605,
+        "mean": 1702.8711963115747,
+        "median": 627.0,
+        "min": 0.0,
+        "max": 71063.0
+      },
+      "estimated_raw_log_rows": 35108324,
+      "estimated_raw_log_bytes": 2922960888,
+      "estimated_raw_log_size": "2.722 GiB",
+      "positive_raw_log_rows": 137243,
+      "non_refund_raw_log_rows": 34971081,
+      "accounting_check": true
+    }
+  ],
+  "payment_episode_diagnostics": {
+    "7d_14d": {
+      "total_payment_episodes": 26583,
+      "eligible_episodes": 24359,
+      "positive_episodes": 145,
+      "non_refund_episodes": 24214,
+      "refund_during_feature_excluded": 870,
+      "observation_window_incomplete": 325,
+      "right_censored": 1029,
+      "unique_users_with_eligible_episode": 22237,
+      "users_with_multiple_eligible_episodes": 1943,
+      "duplicate_eligible_episodes_beyond_one_per_user": 2122,
+      "warning": "Diagnostic only: episode windows can overlap, repeated samples from one user are correlated, and one refund can be visible to multiple anchors without a transaction ID."
+    },
+    "14d_30d": {
+      "total_payment_episodes": 26583,
+      "eligible_episodes": 23086,
+      "positive_episodes": 113,
+      "non_refund_episodes": 22973,
+      "refund_during_feature_excluded": 978,
+      "observation_window_incomplete": 818,
+      "right_censored": 1701,
+      "unique_users_with_eligible_episode": 21329,
+      "users_with_multiple_eligible_episodes": 1633,
+      "duplicate_eligible_episodes_beyond_one_per_user": 1757,
+      "warning": "Diagnostic only: episode windows can overlap, repeated samples from one user are correlated, and one refund can be visible to multiple anchors without a transaction ID."
+    },
+    "14d_60d": {
+      "total_payment_episodes": 26583,
+      "eligible_episodes": 21626,
+      "positive_episodes": 176,
+      "non_refund_episodes": 21450,
+      "refund_during_feature_excluded": 978,
+      "observation_window_incomplete": 818,
+      "right_censored": 3161,
+      "unique_users_with_eligible_episode": 20144,
+      "users_with_multiple_eligible_episodes": 1389,
+      "duplicate_eligible_episodes_beyond_one_per_user": 1482,
+      "warning": "Diagnostic only: episode windows can overlap, repeated samples from one user are correlated, and one refund can be visible to multiple anchors without a transaction ID."
+    },
+    "30d_30d": {
+      "total_payment_episodes": 26583,
+      "eligible_episodes": 22333,
+      "positive_episodes": 81,
+      "non_refund_episodes": 22252,
+      "refund_during_feature_excluded": 1058,
+      "observation_window_incomplete": 1783,
+      "right_censored": 1409,
+      "unique_users_with_eligible_episode": 20730,
+      "users_with_multiple_eligible_episodes": 1493,
+      "duplicate_eligible_episodes_beyond_one_per_user": 1603,
+      "warning": "Diagnostic only: episode windows can overlap, repeated samples from one user are correlated, and one refund can be visible to multiple anchors without a transaction ID."
+    }
+  },
+  "method_recommendation": {
+    "first_pay": "Preferred for the first baseline because it yields one sample per user, avoids within-user dependence, and supports ordinary user-level splitting. It can be far from a later refund and does not represent renewal-specific risk.",
+    "payment_episode": "Potentially better for recurring-payment risk, but only after defining episode boundaries/refund linkage, preventing overlapping windows, and grouping all episodes from one user in the same train/validation fold. KT4 has no explicit transaction-refund key, so naive episode labels are not recommended yet."
+  },
+  "timestamp_unit_counts": {
+    "ms": 131441538
+  },
+  "non_monotonic_source_files": 0,
+  "source_schema_count_for_pay_users": 1,
+  "estimated_raw_log_columns": [
+    "user_id",
+    "timestamp",
+    "action_type",
+    "item_id",
+    "cursor_time",
+    "source",
+    "user_answer",
+    "platform",
+    "datetime"
+  ],
+  "failures": [],
+  "artifacts": {
+    "csv": "D:\\SK_encoa\\SKN35-2nd-5Team\\artifacts\\eda\\ednet_pay_anchor_window_analysis.csv",
+    "json": "D:\\SK_encoa\\SKN35-2nd-5Team\\artifacts\\eda\\ednet_pay_anchor_window_analysis.json"
+  }
+}

@@ -1,0 +1,302 @@
+{
+  "scope": {
+    "kt4_directory": "D:\\SK_encoa\\SKN35-2nd-5Team\\KT4",
+    "source_files_are_modified": false,
+    "learning_behavior_definition": "all action types except pay and refund",
+    "pay_refund_matching": "chronological LIFO: each refund is matched to the most recent unmatched preceding pay; user windows use the earliest valid matched refund",
+    "timestamp_handling": "Unix seconds/ms/us/ns auto-detected; output in UTC"
+  },
+  "overall": {
+    "discovered_csv_files": 1000,
+    "successful_files": 1000,
+    "failed_files": 0,
+    "total_events": 3956250,
+    "events_with_invalid_timestamp": 0,
+    "first_timestamp": "2018-09-03T13:03:45.248+00:00",
+    "last_timestamp": "2019-12-01T01:34:36.848+00:00",
+    "observation_days": 453.52143055555723
+  },
+  "payment_users": {
+    "pay_users": 495,
+    "refund_users": 15,
+    "pay_and_refund_users": 15,
+    "pay_then_refund_users": 15,
+    "pay_and_refund_no_valid_order_users": 0,
+    "pay_only_users": 480,
+    "refund_only_users": 0,
+    "neither_users": 505
+  },
+  "pay_to_refund_duration": {
+    "days": {
+      "count": 15,
+      "mean": 43.714030550154455,
+      "median": 9.951196944443163,
+      "q1": 1.5514599363423054,
+      "q3": 95.74242717013867,
+      "min": 0.17084012731633805,
+      "max": 117.64509083333391
+    },
+    "hours": {
+      "count": 15,
+      "mean": 1049.1367332037069,
+      "median": 238.82872666663593,
+      "q1": 37.23503847221533,
+      "q3": 2297.818252083328,
+      "min": 4.100163055592113,
+      "max": 2823.4821800000136
+    },
+    "user_bins": {
+      "< 1 hour": 0,
+      "1-24 hours": 3,
+      "1-3 days": 2,
+      "3-7 days": 0,
+      "7-14 days": 4,
+      "14-30 days": 0,
+      "30+ days": 6
+    }
+  },
+  "learning_events_before_refund_bins": {
+    "0 events": 1,
+    "1-9 events": 0,
+    "10-49 events": 4,
+    "50-99 events": 0,
+    "100-499 events": 2,
+    "500+ events": 8
+  },
+  "learning_behavior_before_refund": {
+    "event_count": {
+      "count": 15,
+      "mean": 3343.266666666667,
+      "median": 1791.0,
+      "q1": 39.5,
+      "q3": 5472.0,
+      "min": 0.0,
+      "max": 12371.0
+    },
+    "active_days": {
+      "count": 15,
+      "mean": 24.066666666666666,
+      "median": 7.0,
+      "q1": 2.0,
+      "q3": 40.0,
+      "min": 0.0,
+      "max": 120.0
+    },
+    "observation_days": {
+      "count": 15,
+      "mean": 70.28458171373441,
+      "median": 7.766583576387277,
+      "q1": 0.4510249074079372,
+      "q3": 69.28618440393359,
+      "min": 0.0,
+      "max": 371.0478920949057
+    }
+  },
+  "observation_days_before_refund_thresholds": {
+    ">= 1 days": 10,
+    ">= 3 days": 9,
+    ">= 7 days": 8,
+    ">= 14 days": 7,
+    ">= 30 days": 6
+  },
+  "active_days_before_refund_thresholds": {
+    ">= 1 active days": 14,
+    ">= 3 active days": 9,
+    ">= 7 active days": 8,
+    ">= 14 active days": 6
+  },
+  "between_pay_and_refund_learning_behavior": {
+    "users": 15,
+    "users_with_at_least_one_event": 11,
+    "event_count": {
+      "count": 15,
+      "mean": 2433.866666666667,
+      "median": 167.0,
+      "q1": 2.5,
+      "q3": 4139.5,
+      "min": 0.0,
+      "max": 12326.0
+    },
+    "active_days": {
+      "count": 15,
+      "mean": 18.666666666666668,
+      "median": 2.0,
+      "q1": 0.5,
+      "q3": 28.5,
+      "min": 0.0,
+      "max": 92.0
+    },
+    "observation_days": {
+      "count": 15,
+      "mean": 30.75167333024685,
+      "median": 0.5570506481467574,
+      "q1": 0.0013784722224981696,
+      "q3": 57.10735031249898,
+      "min": 0.0,
+      "max": 109.08648986111085
+    }
+  },
+  "pay_only_after_pay_learning_behavior": {
+    "users": 480,
+    "users_with_at_least_one_event": 469,
+    "event_count": {
+      "count": 480,
+      "mean": 4454.164583333333,
+      "median": 1337.5,
+      "q1": 295.75,
+      "q3": 4563.75,
+      "min": 0.0,
+      "max": 59314.0
+    },
+    "active_days": {
+      "count": 480,
+      "mean": 20.425,
+      "median": 10.0,
+      "q1": 3.75,
+      "q3": 24.0,
+      "min": 0.0,
+      "max": 225.0
+    },
+    "observation_days": {
+      "count": 480,
+      "mean": 60.703511983072964,
+      "median": 37.4577230439818,
+      "q1": 10.31659755786881,
+      "q3": 80.70843038194432,
+      "min": 0.0,
+      "max": 370.36355252314775
+    }
+  },
+  "pay_only_first_pay_near_data_end": {
+    "within_1_days": 0,
+    "within_3_days": 0,
+    "within_7_days": 0,
+    "within_14_days": 0,
+    "within_30_days": 3
+  },
+  "action_types": [
+    {
+      "action_type": "enter",
+      "event_count": 957151,
+      "unique_user_count": 1000
+    },
+    {
+      "action_type": "respond",
+      "event_count": 667308,
+      "unique_user_count": 993
+    },
+    {
+      "action_type": "pause_audio",
+      "event_count": 564592,
+      "unique_user_count": 888
+    },
+    {
+      "action_type": "play_audio",
+      "event_count": 555426,
+      "unique_user_count": 889
+    },
+    {
+      "action_type": "quit",
+      "event_count": 511843,
+      "unique_user_count": 861
+    },
+    {
+      "action_type": "submit",
+      "event_count": 445308,
+      "unique_user_count": 994
+    },
+    {
+      "action_type": "erase_choice",
+      "event_count": 142056,
+      "unique_user_count": 668
+    },
+    {
+      "action_type": "play_video",
+      "event_count": 54044,
+      "unique_user_count": 625
+    },
+    {
+      "action_type": "pause_video",
+      "event_count": 53282,
+      "unique_user_count": 624
+    },
+    {
+      "action_type": "undo_erase_choice",
+      "event_count": 4630,
+      "unique_user_count": 186
+    },
+    {
+      "action_type": "pay",
+      "event_count": 587,
+      "unique_user_count": 495
+    },
+    {
+      "action_type": "refund",
+      "event_count": 16,
+      "unique_user_count": 15
+    },
+    {
+      "action_type": "enroll_coupon",
+      "event_count": 7,
+      "unique_user_count": 7
+    }
+  ],
+  "actions_before_first_valid_refund": [
+    {
+      "action_type": "enter",
+      "event_count": 15413,
+      "unique_pay_then_refund_user_count": 14
+    },
+    {
+      "action_type": "respond",
+      "event_count": 10491,
+      "unique_pay_then_refund_user_count": 13
+    },
+    {
+      "action_type": "quit",
+      "event_count": 9261,
+      "unique_pay_then_refund_user_count": 13
+    },
+    {
+      "action_type": "submit",
+      "event_count": 6152,
+      "unique_pay_then_refund_user_count": 14
+    },
+    {
+      "action_type": "pause_audio",
+      "event_count": 3023,
+      "unique_pay_then_refund_user_count": 9
+    },
+    {
+      "action_type": "play_audio",
+      "event_count": 3003,
+      "unique_pay_then_refund_user_count": 9
+    },
+    {
+      "action_type": "play_video",
+      "event_count": 1075,
+      "unique_pay_then_refund_user_count": 10
+    },
+    {
+      "action_type": "pause_video",
+      "event_count": 1056,
+      "unique_pay_then_refund_user_count": 10
+    },
+    {
+      "action_type": "erase_choice",
+      "event_count": 652,
+      "unique_pay_then_refund_user_count": 11
+    },
+    {
+      "action_type": "undo_erase_choice",
+      "event_count": 23,
+      "unique_pay_then_refund_user_count": 4
+    }
+  ],
+  "failures": [],
+  "artifacts": {
+    "user_summary": "D:\\SK_encoa\\SKN35-2nd-5Team\\artifacts\\eda\\kt4_user_payment_summary.csv",
+    "action_type_summary": "D:\\SK_encoa\\SKN35-2nd-5Team\\artifacts\\eda\\kt4_action_type_summary.csv",
+    "errors": "D:\\SK_encoa\\SKN35-2nd-5Team\\artifacts\\eda\\kt4_payment_analysis_errors.csv"
+  }
+}
