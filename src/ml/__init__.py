@@ -1,16 +1,16 @@
-"""Machine Learning package."""
-from src.ml.decision_tree import train_decision_tree
-from src.ml.random_forest import train_random_forest_advanced
-from src.ml.xgboost_model import train_xgboost
-from src.ml.lightgbm_model import train_lightgbm
-from src.ml.trainer import train_and_save_all_ml_models
-from src.ml.evaluate import evaluate_classifier
+from .lightgbm_model import create_lightgbm
+from .logistic_regression import create_logistic_regression
+from .models import get_model_candidates
+from .random_forest import create_random_forest
+from .trainer import TrainingResult, train_ml_models
+from .xgboost_model import create_xgboost
 
 __all__ = [
-    "train_decision_tree",
-    "train_random_forest_advanced",
-    "train_xgboost",
-    "train_lightgbm",
-    "train_and_save_all_ml_models",
-    "evaluate_classifier",
+    "TrainingResult",
+    "create_lightgbm",
+    "create_logistic_regression",
+    "create_random_forest",
+    "create_xgboost",
+    "get_model_candidates",
+    "train_ml_models",
 ]

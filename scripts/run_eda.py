@@ -1,30 +1,20 @@
-#!/usr/bin/env python3
-"""
-CLI Script to run comprehensive EDA and print dataset summary.
-"""
+import json
 
-import sys
-from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-sys.path.append(str(PROJECT_ROOT))
-
-from src.data.loader import load_feature_dataset
-from src.analysis.eda import compute_dataset_overview, compare_churn_groups, compute_correlations
+from src.analysis.eda import build_eda_report, categorical_summary, numeric_summary
+from src.load_data.loader import load_train_data
+from src.utils.paths import REPORTS_DIR, ensure_artifact_dirs
 
 
-def main():
-    print("=== Running Exploratory Data Analysis ===")
-    df = load_feature_dataset()
-    overview = compute_dataset_overview(df)
-    print("\n[Overview]")
-    for k, v in overview.items():
-        print(f"  - {k}: {v}")
-        
-    print("\n[Top Correlations with Churn]")
-    corrs = compute_correlations(df)
-    print(corrs.tail(10).to_string())
-    print("\n[OK] EDA completed successfully!")
+def main() -> None:
+    data = load_train_data()
+    report = build_eda_report(data)
+    ensure_artifact_dirs()
+    (REPORTS_DIR / "eda_summary.json").write_text(
+        json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+    numeric_summary(data).to_csv(REPORTS_DIR / "numeric_summary.csv", index=False)
+    categorical_summary(data).to_csv(REPORTS_DIR / "categorical_summary.csv", index=False)
+    print(json.dumps(report, ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":

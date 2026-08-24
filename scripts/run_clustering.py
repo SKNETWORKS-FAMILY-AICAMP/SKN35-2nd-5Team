@@ -1,26 +1,16 @@
-#!/usr/bin/env python3
-"""
-CLI Script to run K-Means customer behavior clustering.
-"""
+import argparse
+import json
 
-import sys
-from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-sys.path.append(str(PROJECT_ROOT))
-
-from src.data.loader import load_feature_dataset
-from src.clustering.kmeans import perform_kmeans_clustering, get_cluster_summary
+from src.load_data.loader import load_train_data
+from src.ml.clustering import run_kmeans_clustering
 
 
-def main():
-    print("=== Running K-Means User Clustering ===")
-    df = load_feature_dataset()
-    df_clustered, kmeans, scaler = perform_kmeans_clustering(df, n_clusters=4)
-    summary = get_cluster_summary(df_clustered)
-    print("\n[Cluster Profiles & Churn Rates]")
-    print(summary.to_string())
-    print("\n[OK] Clustering complete!")
+def main() -> None:
+    parser = argparse.ArgumentParser(description="직원 K-Means 군집화")
+    parser.add_argument("--clusters", type=int, default=4)
+    args = parser.parse_args()
+    _, metrics = run_kmeans_clustering(load_train_data(), n_clusters=args.clusters)
+    print(json.dumps(metrics, ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":

@@ -1,24 +1,28 @@
-import unittest
-from src.features.churn import classify_user_churn_status
+from src.analysis.retention import score_retention_risk
+from src.ml.logistic_regression import create_logistic_regression
+from src.ml.random_forest import create_random_forest
+from src.ml.trainer import train_ml_models
 
 
-class TestChurn(unittest.TestCase):
-    def test_classify_refund_churn(self):
-        res = classify_user_churn_status(has_pay=True, pay_count=1, has_refund=True)
-        self.assertEqual(res["is_refund_churn"], 1)
-        self.assertEqual(res["is_churn"], 1)
-
-    def test_classify_non_renewal_churn(self):
-        res = classify_user_churn_status(has_pay=True, pay_count=1, has_refund=False)
-        self.assertEqual(res["is_non_renewal_churn"], 1)
-        self.assertEqual(res["is_churn"], 1)
-
-    def test_classify_retained_user(self):
-        res = classify_user_churn_status(has_pay=True, pay_count=2, has_refund=False)
-        self.assertEqual(res["is_non_renewal_churn"], 0)
-        self.assertEqual(res["is_refund_churn"], 0)
-        self.assertEqual(res["is_churn"], 0)
+def test_model_factories_are_independent():
+    logistic = create_logistic_regression(random_state=7)
+    forest = create_random_forest(random_state=7)
+    assert logistic.random_state == 7
+    assert forest.random_state == 7
 
 
-if __name__ == "__main__":
-    unittest.main()
+def test_logistic_regression_training_and_scoring(sample_frame):
+    results, leaderboard, unavailable = train_ml_models(
+        sample_frame,
+        selected=["logistic_regression"],
+        test_size=0.25,
+        save_artifacts=False,
+    )
+    assert not unavailable
+    assert leaderboard.iloc[0]["model"] == "logistic_regression"
+    assert 0.0 <= leaderboard.iloc[0]["roc_auc"] <= 1.0
+
+    scored = score_retention_risk(results[0].pipeline, sample_frame)
+    assert len(scored) == len(sample_frame)
+    assert scored["attrition_probability"].between(0, 1).all()
+    assert scored["recommended_action"].str.len().gt(0).all()

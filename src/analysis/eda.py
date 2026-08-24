@@ -1,56 +1,56 @@
-"""
-Exploratory Data Analysis (EDA) module for churn dataset.
-"""
+from typing import Any
 
-from typing import Dict, Any, List
 import pandas as pd
-import numpy as np
+
+from src.utils.constants import ID_COLUMN, POSITIVE_LABEL, TARGET_COLUMN
 
 
-def compute_dataset_overview(df: pd.DataFrame) -> Dict[str, Any]:
-    """Compute top-level summary metrics of the dataset."""
-    total_users = len(df)
-    churn_users = int(df["is_churn"].sum()) if "is_churn" in df.columns else 0
-    retained_users = total_users - churn_users
-    
-    refund_churn = int(df["is_refund_churn"].sum()) if "is_refund_churn" in df.columns else 0
-    non_renewal_churn = int(df["is_non_renewal_churn"].sum()) if "is_non_renewal_churn" in df.columns else 0
-    
+def numeric_summary(frame: pd.DataFrame) -> pd.DataFrame:
+    numeric = frame.select_dtypes(include="number").drop(columns=[ID_COLUMN], errors="ignore")
+    if numeric.empty:
+        return pd.DataFrame()
+    return numeric.describe().T.rename_axis("feature").reset_index()
+
+
+def categorical_summary(frame: pd.DataFrame) -> pd.DataFrame:
+    categorical = frame.select_dtypes(exclude="number")
+    rows: list[dict[str, Any]] = []
+    for column in categorical.columns:
+        mode = categorical[column].mode(dropna=True)
+        rows.append(
+            {
+                "feature": column,
+                "unique": int(categorical[column].nunique(dropna=True)),
+                "most_frequent": None if mode.empty else mode.iloc[0],
+                "missing": int(categorical[column].isna().sum()),
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def attrition_rate_by(frame: pd.DataFrame, column: str) -> pd.DataFrame:
+    """선택한 피처의 그룹별 직원 수와 이탈률을 계산한다."""
+    if column not in frame.columns:
+        raise KeyError(f"존재하지 않는 컬럼입니다: {column}")
+    grouped = (
+        frame.assign(_left=frame[TARGET_COLUMN].eq(POSITIVE_LABEL))
+        .groupby(column, dropna=False, observed=True)
+        .agg(employee_count=(TARGET_COLUMN, "size"), attrition_rate=("_left", "mean"))
+        .reset_index()
+        .sort_values("attrition_rate", ascending=False)
+    )
+    grouped["attrition_rate"] = grouped["attrition_rate"] * 100
+    return grouped
+
+
+def build_eda_report(frame: pd.DataFrame) -> dict[str, Any]:
+    """화면과 CLI에서 사용할 데이터 요약 정보를 계산한다."""
+    target_counts = frame[TARGET_COLUMN].value_counts(dropna=False)
     return {
-        "total_users": total_users,
-        "churn_users": churn_users,
-        "churn_rate": (churn_users / total_users * 100) if total_users > 0 else 0,
-        "retained_users": retained_users,
-        "retained_rate": (retained_users / total_users * 100) if total_users > 0 else 0,
-        "refund_churn": refund_churn,
-        "non_renewal_churn": non_renewal_churn,
-        "num_features": df.shape[1],
+        "rows": int(len(frame)),
+        "columns": int(frame.shape[1]),
+        "duplicate_rows": int(frame.duplicated().sum()),
+        "missing_values": int(frame.isna().sum().sum()),
+        "attrition_rate": float(frame[TARGET_COLUMN].eq(POSITIVE_LABEL).mean()),
+        "target_counts": target_counts.to_dict(),
     }
-
-
-def compare_churn_groups(df: pd.DataFrame, feature_cols: List[str] = None) -> pd.DataFrame:
-    """Compare feature statistics between retained (0) and churned (1) users."""
-    if feature_cols is None:
-        feature_cols = [
-            "obs_total_events", "obs_active_days", "obs_events_per_active_day",
-            "obs_w1_events", "obs_w2_events", "obs_decay_ratio",
-            "obs_recency_days", "obs_last_active_day",
-            "obs_respond_count", "obs_submit_count", "obs_play_video_count", "obs_play_audio_count",
-            "pre_pay_events", "pre_pay_active_days", "total_lifetime_events"
-        ]
-    valid_cols = [c for c in feature_cols if c in df.columns]
-    
-    stats = df.groupby("is_churn")[valid_cols].agg(["mean", "median"]).T
-    return stats
-
-
-def compute_correlations(df: pd.DataFrame, target_col: str = "is_churn") -> pd.Series:
-    """Calculate feature correlations with the target churn label."""
-    numeric_df = df.select_dtypes(include=[np.number])
-    if target_col not in numeric_df.columns:
-        return pd.Series()
-    corrs = numeric_df.corr()[target_col].drop(
-        index=[target_col, "is_refund_churn", "is_non_renewal_churn"],
-        errors="ignore"
-    ).sort_values()
-    return corrs
