@@ -1,8 +1,5 @@
-"""Analysis and EDA package."""
-from src.analysis.eda import compute_dataset_overview, compare_churn_groups, compute_correlations
+"""Exploratory data analysis functions."""
 
-__all__ = [
-    "compute_dataset_overview",
-    "compare_churn_groups",
-    "compute_correlations",
-]
+from .eda import build_eda_report, categorical_summary, numeric_summary
+
+__all__ = ["build_eda_report", "categorical_summary", "numeric_summary"]
