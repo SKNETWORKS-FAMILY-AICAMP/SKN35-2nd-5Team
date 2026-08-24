@@ -1,5 +1,3 @@
-"""Optional employee-segmentation baseline used by the CLI scaffold."""
-
 import json
 from typing import Any
 
@@ -48,4 +46,3 @@ def run_kmeans_clustering(
             json.dumps(metrics, ensure_ascii=False, indent=2), encoding="utf-8"
         )
     return assignments, metrics
-

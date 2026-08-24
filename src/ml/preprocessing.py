@@ -1,5 +1,3 @@
-"""Shared feature preprocessing for tabular models."""
-
 import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
@@ -18,7 +16,7 @@ def build_preprocessor(
     *,
     dense_output: bool = False,
 ) -> ColumnTransformer:
-    """Impute numeric/categorical features and one-hot encode categories."""
+    """수치형과 범주형 결측치를 처리하고 범주형을 원-핫 인코딩한다."""
     numeric_columns, categorical_columns = infer_feature_types(frame)
     numeric_pipeline = Pipeline(
         steps=[
@@ -47,4 +45,3 @@ def build_preprocessor(
         verbose_feature_names_out=False,
         sparse_threshold=0.0 if dense_output else 0.3,
     )
-

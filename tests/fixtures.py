@@ -1,5 +1,3 @@
-"""Shared synthetic-data fixtures."""
-
 import pandas as pd
 import pytest
 

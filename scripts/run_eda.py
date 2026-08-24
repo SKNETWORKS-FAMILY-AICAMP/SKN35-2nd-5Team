@@ -1,5 +1,3 @@
-"""Generate EDA report files."""
-
 import json
 
 from src.analysis.eda import build_eda_report, categorical_summary, numeric_summary

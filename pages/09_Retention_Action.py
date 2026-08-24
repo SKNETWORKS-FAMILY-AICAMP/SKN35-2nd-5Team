@@ -1,5 +1,3 @@
-"""Retention risk review page."""
-
 import joblib
 import streamlit as st
 

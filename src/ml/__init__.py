@@ -1,5 +1,3 @@
-"""Classical machine-learning models and training pipeline."""
-
 from .lightgbm_model import create_lightgbm
 from .logistic_regression import create_logistic_regression
 from .models import get_model_candidates

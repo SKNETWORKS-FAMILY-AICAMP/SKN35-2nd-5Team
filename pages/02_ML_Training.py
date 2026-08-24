@@ -1,5 +1,3 @@
-"""Classical ML training page."""
-
 import streamlit as st
 
 from src.load_data.loader import load_train_data
@@ -33,4 +31,3 @@ if st.button("선택 모델 학습", type="primary", disabled=not selected):
             if unavailable:
                 st.warning(f"설치되지 않아 제외된 모델: {', '.join(unavailable)}")
             st.info("모델과 리더보드는 artifacts/models 및 artifacts/reports에 저장했습니다.")
-

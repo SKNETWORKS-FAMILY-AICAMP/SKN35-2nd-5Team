@@ -1,5 +1,3 @@
-"""SHAP and fallback permutation importance page."""
-
 import joblib
 import streamlit as st
 

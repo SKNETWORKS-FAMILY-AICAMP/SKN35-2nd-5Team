@@ -1,5 +1,3 @@
-"""Load trained artifacts for model comparison."""
-
 import joblib
 import pandas as pd
 

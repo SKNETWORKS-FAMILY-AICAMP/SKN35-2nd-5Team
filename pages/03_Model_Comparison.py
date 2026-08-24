@@ -1,5 +1,3 @@
-"""Model benchmark and curve comparison page."""
-
 import joblib
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -8,10 +6,10 @@ import streamlit as st
 from src.load_data.loader import load_train_data
 from src.ml.evaluation import classification_curves, evaluate_classifier
 from src.ml.trainer import make_train_valid_split
-from src.utils.paths import DL_MODEL_PATH, ML_LEADERBOARD_PATH
+from src.utils.paths import ML_LEADERBOARD_PATH
 
-st.set_page_config(page_title="04 Model Comparison", page_icon="🏁", layout="wide")
-st.title("04. 모델 종합 벤치마크")
+st.set_page_config(page_title="03 Model Comparison", page_icon="🏁", layout="wide")
+st.title("03. 모델 종합 벤치마크")
 
 if not ML_LEADERBOARD_PATH.exists():
     st.warning("저장된 ML 결과가 없습니다. 먼저 02 ML Training을 실행하세요.")
@@ -20,8 +18,6 @@ if not ML_LEADERBOARD_PATH.exists():
 leaderboard = pd.read_csv(ML_LEADERBOARD_PATH)
 _, x_valid, _, y_valid = make_train_valid_split(load_train_data())
 model_paths = dict(zip(leaderboard["model"], leaderboard["artifact_path"]))
-if DL_MODEL_PATH.exists():
-    model_paths["mlp"] = str(DL_MODEL_PATH)
 
 evaluated = {}
 for name, path in model_paths.items():
@@ -49,4 +45,3 @@ roc_axis.legend()
 pr_axis.legend()
 st.pyplot(roc_axis.figure)
 plt.close(roc_axis.figure)
-

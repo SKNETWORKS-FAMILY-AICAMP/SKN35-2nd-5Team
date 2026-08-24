@@ -1,5 +1,3 @@
-"""Load and validate employee attrition CSV datasets."""
-
 from pathlib import Path
 
 import pandas as pd
@@ -9,7 +7,7 @@ from src.utils.paths import TEST_DATA_PATH, TRAIN_DATA_PATH
 
 
 def load_dataset(path: str | Path, *, require_target: bool = True) -> pd.DataFrame:
-    """Read a CSV and perform lightweight schema validation."""
+    """CSV를 읽고 필수 컬럼, 직원 ID, 타깃값을 검증한다."""
     csv_path = Path(path)
     if not csv_path.exists():
         raise FileNotFoundError(f"데이터 파일을 찾을 수 없습니다: {csv_path}")
@@ -49,7 +47,7 @@ def split_features_target(
     *,
     drop_id: bool = True,
 ) -> tuple[pd.DataFrame, pd.Series]:
-    """Split a validated frame and encode Left=1, Stayed=0."""
+    """식별자를 제외한 피처와 Left=1, Stayed=0 타깃을 분리한다."""
     if TARGET_COLUMN not in frame.columns:
         raise ValueError(f"'{TARGET_COLUMN}' 컬럼이 없어 학습 데이터를 분리할 수 없습니다.")
     features = frame.drop(columns=[TARGET_COLUMN])
@@ -59,4 +57,3 @@ def split_features_target(
     if target.isna().any():
         raise ValueError("타깃에 결측치 또는 알 수 없는 레이블이 있습니다.")
     return features, target.astype("int8")
-

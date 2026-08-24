@@ -1,5 +1,3 @@
-"""SHAP and model-agnostic feature importance for persisted pipelines."""
-
 import numpy as np
 import pandas as pd
 from sklearn.inspection import permutation_importance
@@ -15,7 +13,7 @@ def shap_feature_importance(
     max_samples: int = 500,
     random_state: int = RANDOM_STATE,
 ) -> pd.DataFrame:
-    """Compute mean absolute SHAP values on the encoded feature space."""
+    """인코딩된 피처별 SHAP 절댓값 평균을 계산한다."""
     import shap
 
     features, _ = split_features_target(frame)
@@ -56,7 +54,7 @@ def permutation_feature_importance(
     n_repeats: int = 3,
     random_state: int = RANDOM_STATE,
 ) -> pd.DataFrame:
-    """Measure original-column importance using ROC-AUC score degradation."""
+    """피처를 섞었을 때 발생하는 ROC-AUC 감소량으로 중요도를 계산한다."""
     features, target = split_features_target(frame)
     if len(features) > max_samples:
         sampled = features.sample(n=max_samples, random_state=random_state)
