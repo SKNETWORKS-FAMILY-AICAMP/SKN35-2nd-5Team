@@ -47,7 +47,7 @@ CLI는 저장소 루트에서 모듈 방식으로 실행합니다.
 \`\`\`powershell
 uv run python -m scripts.run_eda
 uv run python -m scripts.train_ml
-uv run python -m scripts.train_ml --models decision_tree random_forest
+uv run python -m scripts.train_ml --models logistic_regression random_forest
 uv run python -m scripts.train_dl --hidden-layers 64 32 --max-iter 100
 uv run python -m scripts.evaluate_models
 uv run python -m scripts.run_clustering --clusters 4
@@ -64,7 +64,7 @@ uv run pytest
 - 하나의 계층화 train/validation 분할과 random seed를 공통 사용
 - 수치형: 중앙값 대치 후 표준화
 - 범주형: 최빈값 대치 후 One-Hot Encoding
-- Decision Tree, Random Forest, XGBoost, LightGBM 기준선 비교
+- Logistic Regression, Random Forest, XGBoost, LightGBM 기준선 비교
 - ML 모델 정의는 모델별 Python 파일로 분리하고 trainer는 공통 학습 흐름만 담당
 - ROC-AUC 우선, F1 보조 기준으로 최고 ML 모델 선정
 - MLP는 2개 은닉층과 early stopping을 기본값으로 사용
