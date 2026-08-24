@@ -1,26 +1,20 @@
-#!/usr/bin/env python3
-"""
-CLI Script to compare and rank all trained ML and DL models.
-"""
+"""Print the saved model leaderboard."""
 
-import sys
-from pathlib import Path
+import pandas as pd
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-sys.path.append(str(PROJECT_ROOT))
-
-from src.comparison.model_comparison import build_comparison_dataframe
+from src.utils.paths import DL_METRICS_PATH, ML_LEADERBOARD_PATH
 
 
-def main():
-    print("=== Model Benchmark Leaderboard ===")
-    df_comp = build_comparison_dataframe()
-    if df_comp.empty:
-        print("[WARN] No trained models found in artifacts/results/. Please run train_ml.py or train_dl.py first.")
-    else:
-        print(df_comp.to_string(index=False))
-        
-    print("\n[OK] Evaluation ranking complete!")
+def main() -> None:
+    if not ML_LEADERBOARD_PATH.exists():
+        raise FileNotFoundError("리더보드가 없습니다. 먼저 train_ml을 실행하세요.")
+    leaderboard = pd.read_csv(ML_LEADERBOARD_PATH)
+    if DL_METRICS_PATH.exists():
+        dl_metrics = pd.read_csv(DL_METRICS_PATH)
+        common = [column for column in leaderboard.columns if column in dl_metrics.columns]
+        leaderboard = pd.concat([leaderboard, dl_metrics[common]], ignore_index=True)
+    leaderboard = leaderboard.sort_values(["roc_auc", "f1"], ascending=False)
+    print(leaderboard.to_string(index=False))
 
 
 if __name__ == "__main__":
