@@ -8,7 +8,7 @@ RANDOM_STATE = 42
 TEST_SIZE = 0.2
 
 MODEL_NAMES = (
-    "decision_tree",
+    "logistic_regression",
     "random_forest",
     "xgboost",
     "lightgbm",

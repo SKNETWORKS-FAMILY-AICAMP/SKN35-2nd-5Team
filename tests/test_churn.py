@@ -1,25 +1,25 @@
 from src.analysis.retention import score_retention_risk
-from src.ml.decision_tree import create_decision_tree
+from src.ml.logistic_regression import create_logistic_regression
 from src.ml.random_forest import create_random_forest
 from src.ml.trainer import train_ml_models
 
 
 def test_model_factories_are_independent():
-    tree = create_decision_tree(random_state=7)
+    logistic = create_logistic_regression(random_state=7)
     forest = create_random_forest(random_state=7)
-    assert tree.random_state == 7
+    assert logistic.random_state == 7
     assert forest.random_state == 7
 
 
-def test_decision_tree_training_and_scoring(sample_frame):
+def test_logistic_regression_training_and_scoring(sample_frame):
     results, leaderboard, unavailable = train_ml_models(
         sample_frame,
-        selected=["decision_tree"],
+        selected=["logistic_regression"],
         test_size=0.25,
         save_artifacts=False,
     )
     assert not unavailable
-    assert leaderboard.iloc[0]["model"] == "decision_tree"
+    assert leaderboard.iloc[0]["model"] == "logistic_regression"
     assert 0.0 <= leaderboard.iloc[0]["roc_auc"] <= 1.0
 
     scored = score_retention_risk(results[0].pipeline, sample_frame)

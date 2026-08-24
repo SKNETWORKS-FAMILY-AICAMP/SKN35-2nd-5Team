@@ -29,7 +29,7 @@ st.subheader("워크플로")
 st.markdown(
     """
 1. **EDA** — 데이터 품질, 분포, 그룹별 이탈률 확인
-2. **ML Training** — Decision Tree, Random Forest, XGBoost, LightGBM 비교
+2. **ML Training** — Logistic Regression, Random Forest, XGBoost, LightGBM 비교
 3. **DL Training** — 2개 은닉층 MLP 학습
 4. **Model Comparison** — ROC/PR 곡선과 리더보드 확인
 5–7. **확장 예정** — 피처 엔지니어링, 군집화, 튜닝 단계

@@ -4,8 +4,8 @@ from collections import OrderedDict
 
 from sklearn.base import BaseEstimator
 
-from src.ml.decision_tree import create_decision_tree
 from src.ml.lightgbm_model import create_lightgbm
+from src.ml.logistic_regression import create_logistic_regression
 from src.ml.random_forest import create_random_forest
 from src.ml.xgboost_model import create_xgboost
 from src.utils.constants import RANDOM_STATE
@@ -19,7 +19,7 @@ def get_model_candidates(
     """Create fresh baseline estimators and report unavailable optional models."""
     factories = OrderedDict(
         [
-            ("decision_tree", create_decision_tree),
+            ("logistic_regression", create_logistic_regression),
             ("random_forest", create_random_forest),
             ("xgboost", create_xgboost),
             ("lightgbm", create_lightgbm),
