@@ -1,5 +1,3 @@
-"""Train one or more classical ML baselines."""
-
 import argparse
 
 from src.load_data.loader import load_train_data

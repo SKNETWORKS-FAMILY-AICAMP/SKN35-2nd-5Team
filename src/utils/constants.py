@@ -1,5 +1,3 @@
-"""Project-wide constants."""
-
 TARGET_COLUMN = "Attrition"
 ID_COLUMN = "Employee ID"
 POSITIVE_LABEL = "Left"

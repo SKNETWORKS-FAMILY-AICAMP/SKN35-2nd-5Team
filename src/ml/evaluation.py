@@ -1,5 +1,3 @@
-"""Common binary-classification metrics and curves."""
-
 from typing import Any
 
 import numpy as np
@@ -55,4 +53,3 @@ def classification_curves(model: Any, features: Any, target: Any) -> dict[str, n
         "recall": recall,
         "pr_thresholds": pr_thresholds,
     }
-

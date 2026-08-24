@@ -1,12 +1,9 @@
-"""XGBoost baseline definition."""
-
 from typing import Any
 
 from src.utils.constants import RANDOM_STATE
 
 
 def create_xgboost(*, random_state: int = RANDOM_STATE) -> Any:
-    """Return a fresh, untuned XGBoost classifier."""
     from xgboost import XGBClassifier
 
     return XGBClassifier(

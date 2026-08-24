@@ -1,5 +1,3 @@
-"""Model registry that assembles independently defined baselines."""
-
 from collections import OrderedDict
 
 from sklearn.base import BaseEstimator
@@ -16,7 +14,7 @@ def get_model_candidates(
     random_state: int = RANDOM_STATE,
     selected: list[str] | tuple[str, ...] | None = None,
 ) -> tuple[OrderedDict[str, BaseEstimator], dict[str, str]]:
-    """Create fresh baseline estimators and report unavailable optional models."""
+    """선택한 모델을 생성하고 설치되지 않은 모델 정보를 반환한다."""
     factories = OrderedDict(
         [
             ("logistic_regression", create_logistic_regression),

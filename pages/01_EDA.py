@@ -1,5 +1,3 @@
-"""Exploratory data analysis page."""
-
 import matplotlib.pyplot as plt
 import streamlit as st
 

@@ -1,12 +1,9 @@
-"""LightGBM baseline definition."""
-
 from typing import Any
 
 from src.utils.constants import RANDOM_STATE
 
 
 def create_lightgbm(*, random_state: int = RANDOM_STATE) -> Any:
-    """Return a fresh, untuned LightGBM classifier."""
     from lightgbm import LGBMClassifier
 
     return LGBMClassifier(

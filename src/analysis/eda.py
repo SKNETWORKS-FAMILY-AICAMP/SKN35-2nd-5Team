@@ -1,5 +1,3 @@
-"""Reusable EDA calculations without UI dependencies."""
-
 from typing import Any
 
 import pandas as pd
@@ -31,7 +29,7 @@ def categorical_summary(frame: pd.DataFrame) -> pd.DataFrame:
 
 
 def attrition_rate_by(frame: pd.DataFrame, column: str) -> pd.DataFrame:
-    """Return count and attrition rate grouped by one feature."""
+    """선택한 피처의 그룹별 직원 수와 이탈률을 계산한다."""
     if column not in frame.columns:
         raise KeyError(f"존재하지 않는 컬럼입니다: {column}")
     grouped = (
@@ -46,7 +44,7 @@ def attrition_rate_by(frame: pd.DataFrame, column: str) -> pd.DataFrame:
 
 
 def build_eda_report(frame: pd.DataFrame) -> dict[str, Any]:
-    """Build a compact serializable overview for CLI or UI use."""
+    """화면과 CLI에서 사용할 데이터 요약 정보를 계산한다."""
     target_counts = frame[TARGET_COLUMN].value_counts(dropna=False)
     return {
         "rows": int(len(frame)),

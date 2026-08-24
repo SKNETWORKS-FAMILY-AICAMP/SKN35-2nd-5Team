@@ -1,5 +1,3 @@
-"""Run the optional K-Means employee segmentation baseline."""
-
 import argparse
 import json
 

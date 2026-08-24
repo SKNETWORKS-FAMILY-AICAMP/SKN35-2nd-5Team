@@ -1,5 +1,3 @@
-"""Turn attrition risk scores into reviewable retention suggestions."""
-
 from typing import Any
 
 import pandas as pd
@@ -29,7 +27,7 @@ def score_retention_risk(
     *,
     threshold: float = 0.5,
 ) -> pd.DataFrame:
-    """Score employees and attach non-causal, human-review suggestions."""
+    """직원별 이탈 확률과 사람이 검토할 리텐션 제안을 생성한다."""
     features = frame.drop(columns=[TARGET_COLUMN, ID_COLUMN], errors="ignore")
     scores = positive_probability(model, features)
     output = pd.DataFrame(

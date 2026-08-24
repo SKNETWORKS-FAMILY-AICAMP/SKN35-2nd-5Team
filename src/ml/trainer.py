@@ -1,5 +1,3 @@
-"""Train, evaluate, rank, and persist classical ML baselines."""
-
 from dataclasses import dataclass
 from time import perf_counter
 from typing import Any
@@ -55,7 +53,7 @@ def train_ml_models(
     random_state: int = RANDOM_STATE,
     save_artifacts: bool = True,
 ) -> tuple[list[TrainingResult], pd.DataFrame, dict[str, str]]:
-    """Train requested baselines against the same holdout split."""
+    """선택한 모델을 동일한 검증 데이터로 학습·평가하고 저장한다."""
     x_train, x_valid, y_train, y_valid = make_train_valid_split(
         frame,
         test_size=test_size,
