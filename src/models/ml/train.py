@@ -1,4 +1,58 @@
-"""사용 가능한 머신러닝 모델을 공통 조건으로 학습·비교·저장하는 모듈."""
+"""
+머신러닝 모델 공통 학습·비교 관리자  
+=====================================
+
+(모델 짜기전에 먼저 읽어야 함!!!!!)
+
+이 파일은 Logistic Regression, Random Forest, XGBoost, LightGBM을 직접
+구현하는 파일이 아니다. 팀원들이 각자 구현한 모델을 동일한 데이터와 평가
+조건으로 학습시켜 공정하게 비교하고, 가장 좋은 모델을 저장하는 공통 실행 파일이다.
+
+전체 처리 순서
+--------------
+1. ``data/preprocessing/train_processed.csv``를 불러온다.
+2. CSV 저장 인덱스를 제거하고 모든 피처가 숫자인지 검증한다.
+3. 저장된 타깃 방향을 퇴사 ``Left=1``, 재직 ``Stayed=0``으로 통일한다.
+4. 모든 모델이 함께 사용할 데이터를 학습 60%, 검증 20%, 최종 테스트 20%로
+   한 번만 계층 분할한다.
+5. 각 모델 파일의 생성 함수를 불러와 동일한 학습셋으로 학습한다.
+6. 검증셋의 ROC-AUC와 F1 등을 계산해 후보 모델의 순위를 정한다.
+7. 검증 ROC-AUC 1위 모델을 학습+검증 데이터로 다시 학습한다.
+8. 마지막까지 사용하지 않은 최종 테스트셋으로 일반화 성능을 한 번 평가한다.
+9. 모델 파일과 성능표를 ``artifacts/models``, ``artifacts/reports``에 저장한다.
+
+팀원 작업 규칙
+---------------
+- 개별 모델 담당자는 원칙적으로 이 ``train.py``를 수정하지 않는다.
+- 담당 모델 파일에 아래 이름의 생성 함수만 구현하면 공통 학습에 자동 포함된다.
+
+  - ``logistic_regression.py`` → ``create_logistic_regression()``
+  - ``random_forest.py`` → ``create_random_forest()``
+  - ``xgboost.py`` → ``create_xgboost()``
+  - ``lightgbm.py`` → ``create_lightgbm()``
+
+- 생성 함수는 아직 학습되지 않은 scikit-learn 호환 분류기 또는 Pipeline을 반환해야
+  한다. 데이터 로드, 데이터 분할, 성능 평가, 모델 저장은 각 모델 파일에서 중복해서
+  작성하지 않고 이 파일에 맡긴다.
+- 모델별 하이퍼파라미터 튜닝은 ``xgboost_tuning.py``처럼 별도 파일에서 진행한다.
+- 아직 구현되지 않았거나 필요한 라이브러리가 없는 모델은 자동으로 제외되므로 다른
+  팀원의 모델 학습을 막지 않는다.
+- 딥러닝 모델은 ``src/models/dl``의 별도 학습 흐름을 사용하며 이 파일의 대상이 아니다.
+
+실행 방법
+---------
+전체 구현 모델을 학습·비교하고 산출물을 저장하려면 프로젝트 루트에서 실행한다.
+
+``uv run python -m src.models.ml.train``
+
+개발 중 특정 모델만 시험하고 기존 산출물을 덮어쓰지 않으려면 다음처럼 호출한다.
+
+``run_training(["xgboost"], save_artifacts=False)``
+
+공통 학습 조건을 바꿔야 할 때만 이 파일의 담당자와 협의하여 수정한다. 이렇게 역할을
+분리하면 여러 팀원이 각자 다른 모델 파일을 개발하고 병합해도 ``train.py``에서 충돌할
+가능성을 줄일 수 있다.
+"""
 
 from importlib import import_module
 from pathlib import Path
@@ -19,7 +73,9 @@ from .utils import RANDOM_STATE, TARGET_COLUMN, evaluate_model
 # 현재 파일 위치를 기준으로 프로젝트 최상위 경로를 계산한다.
 # 실행 위치가 달라져도 데이터와 산출물 경로가 바뀌지 않도록 절대 경로를 사용한다.
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
-RAW_DATA_PATH = PROJECT_ROOT / "data" / "raw" / "train.csv"
+PROCESSED_DATA_PATH = (
+    PROJECT_ROOT / "data" / "preprocessing" / "train_processed.csv"
+)
 MODELS_DIR = PROJECT_ROOT / "artifacts" / "models"
 REPORTS_DIR = PROJECT_ROOT / "artifacts" / "reports"
 LEADERBOARD_PATH = REPORTS_DIR / "ml_leaderboard.csv"
@@ -30,11 +86,10 @@ BEST_MODEL_PATH = MODELS_DIR / "best_ml_model.joblib"
 # 나머지 80% 중 25%를 검증용으로 사용하면 전체 비율은 60:20:20이 된다.
 FINAL_TEST_SIZE = 0.20
 VALIDATION_SIZE_WITHIN_DEVELOPMENT = 0.25
-ID_COLUMNS = ("Employee ID", "EmployeeNumber")
 
-# 퇴사 여부를 모델이 사용할 이진 숫자로 명시적으로 변환한다.
-# LabelEncoder의 알파벳 정렬에 맡기지 않아 타깃 방향이 뒤집히는 문제를 방지한다.
-TARGET_MAPPING = {"Left": 1, "Stayed": 0}
+# train_processed.csv는 LabelEncoder 결과로 Left=0, Stayed=1이 저장돼 있다.
+# 모델과 평가에서는 퇴사를 양성 클래스로 사용하므로 0과 1을 반대로 변환한다.
+PROCESSED_TARGET_MAPPING = {0: 1, 1: 0}
 
 MODEL_SPECS = {
     "logistic_regression": (
@@ -73,9 +128,9 @@ RESULT_COLUMNS = [
 
 
 def load_training_data(
-    data_path: Path = RAW_DATA_PATH,
+    data_path: Path = PROCESSED_DATA_PATH,
 ) -> tuple[pd.DataFrame, pd.Series]:
-    """원본 데이터를 불러오고 퇴사 타깃을 Left=1로 명시 변환한다."""
+    """전처리 데이터를 불러오고 퇴사 타깃을 Left=1로 변환한다."""
 
     if not data_path.exists():
         raise FileNotFoundError(f"학습 데이터가 없습니다: {data_path}")
@@ -84,17 +139,36 @@ def load_training_data(
     if TARGET_COLUMN not in data.columns:
         raise ValueError(f"타깃 컬럼이 없습니다: {TARGET_COLUMN}")
 
-    unexpected_labels = set(data[TARGET_COLUMN].dropna().unique()) - set(TARGET_MAPPING)
+    # CSV 타깃이 숫자 0/1인지 확인하고, 변환 불가능한 값은 오류로 처리한다.
+    encoded_target = pd.to_numeric(data[TARGET_COLUMN], errors="coerce")
+    if encoded_target.isna().any():
+        raise ValueError("전처리 타깃에 숫자로 변환할 수 없는 값이 있습니다.")
+
+    unexpected_labels = set(encoded_target.unique()) - set(PROCESSED_TARGET_MAPPING)
     if unexpected_labels:
         labels = ", ".join(map(str, sorted(unexpected_labels)))
         raise ValueError(f"예상하지 못한 타깃 값입니다: {labels}")
 
-    target = data[TARGET_COLUMN].map(TARGET_MAPPING)
-    if target.isna().any():
-        raise ValueError("타깃에 결측치 또는 변환되지 않은 값이 있습니다.")
+    # 저장된 Left=0, Stayed=1을 학습 기준인 Left=1, Stayed=0으로 뒤집는다.
+    target = encoded_target.map(PROCESSED_TARGET_MAPPING)
 
-    drop_columns = [TARGET_COLUMN, *[column for column in ID_COLUMNS if column in data.columns]]
-    features = data.drop(columns=drop_columns)
+    # pandas가 CSV 저장 인덱스를 Unnamed: 0 같은 이름으로 읽으므로 입력에서 제외한다.
+    saved_index_columns = [
+        column for column in data.columns if column.startswith("Unnamed:")
+    ]
+    features = data.drop(columns=[TARGET_COLUMN, *saved_index_columns])
+
+    # 원핫 인코딩 결과가 True/False로 저장된 경우 모델 입력용 0/1로 변환한다.
+    bool_columns = features.select_dtypes(include="bool").columns
+    features[bool_columns] = features[bool_columns].astype("int8")
+
+    # train_processed.csv가 완전히 수치화됐는지 마지막으로 검증한다.
+    non_numeric_columns = features.select_dtypes(exclude="number").columns.tolist()
+    if non_numeric_columns:
+        raise ValueError(
+            "전처리되지 않은 피처가 있습니다: " + ", ".join(non_numeric_columns)
+        )
+
     return features, target.astype("int8").rename(TARGET_COLUMN)
 
 
