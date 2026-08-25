@@ -10,16 +10,14 @@
 
 전체 처리 순서
 --------------
-1. ``data/preprocessing/train_processed.csv``를 불러온다.
-2. CSV 저장 인덱스를 제거하고 모든 피처가 숫자인지 검증한다.
-3. 저장된 타깃 방향을 퇴사 ``Left=1``, 재직 ``Stayed=0``으로 통일한다.
-4. 모든 모델이 함께 사용할 데이터를 학습 60%, 검증 20%, 최종 테스트 20%로
-   한 번만 계층 분할한다.
-5. 각 모델 파일의 생성 함수를 불러와 동일한 학습셋으로 학습한다.
-6. 검증셋의 ROC-AUC와 F1 등을 계산해 후보 모델의 순위를 정한다.
-7. 검증 ROC-AUC 1위 모델을 학습+검증 데이터로 다시 학습한다.
-8. 마지막까지 사용하지 않은 최종 테스트셋으로 일반화 성능을 한 번 평가한다.
-9. 모델 파일과 성능표를 ``artifacts/models``, ``artifacts/reports``에 저장한다.
+1. ``train_processed.csv``와 ``test_processed.csv``를 불러온다.
+2. 모든 피처가 숫자이고 타깃이 퇴사 ``1``, 재직 ``0``인지 검증한다.
+3. ``train_processed.csv``만 학습 80%, 검증 20%로 계층 분할한다.
+4. 각 모델 파일의 생성 함수를 불러와 동일한 학습셋으로 학습한다.
+5. 검증셋의 ROC-AUC와 F1 등을 계산해 후보 모델의 순위를 정한다.
+6. 검증 ROC-AUC 1위 모델을 전체 ``train_processed.csv``로 다시 학습한다.
+7. 모델 선택에 사용하지 않은 ``test_processed.csv``로 최종 성능을 한 번 평가한다.
+8. 모델 파일과 성능표를 ``artifacts/models``, ``artifacts/reports``에 저장한다.
 
 팀원 작업 규칙
 ---------------
@@ -72,21 +70,17 @@ from .utils import RANDOM_STATE, TARGET_COLUMN, evaluate_model
 # 현재 파일 위치를 기준으로 프로젝트 최상위 경로를 계산한다.
 # 실행 위치가 달라져도 데이터와 산출물 경로가 바뀌지 않도록 절대 경로를 사용한다.
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
-PROCESSED_DATA_PATH = PROJECT_ROOT / "data" / "preprocessing" / "train_processed.csv"
+TRAIN_DATA_PATH = PROJECT_ROOT / "data" / "preprocessing" / "train_processed.csv"
+TEST_DATA_PATH = PROJECT_ROOT / "data" / "preprocessing" / "test_processed.csv"
 MODELS_DIR = PROJECT_ROOT / "artifacts" / "models"
 REPORTS_DIR = PROJECT_ROOT / "artifacts" / "reports"
 LEADERBOARD_PATH = REPORTS_DIR / "ml_leaderboard.csv"
 FINAL_METRICS_PATH = REPORTS_DIR / "best_ml_test_metrics.csv"
 BEST_MODEL_PATH = MODELS_DIR / "best_ml_model.joblib"
 
-# 전체 데이터의 20%는 최종 테스트용으로 끝까지 분리해 둔다.
-# 나머지 80% 중 25%를 검증용으로 사용하면 전체 비율은 60:20:20이 된다.
-FINAL_TEST_SIZE = 0.20
-VALIDATION_SIZE_WITHIN_DEVELOPMENT = 0.25
-
-# train_processed.csv는 LabelEncoder 결과로 Left=0, Stayed=1이 저장돼 있다.
-# 모델과 평가에서는 퇴사를 양성 클래스로 사용하므로 0과 1을 반대로 변환한다.
-PROCESSED_TARGET_MAPPING = {0: 1, 1: 0}
+# 별도 test_processed.csv가 최종 테스트셋이므로, train_processed.csv의 20%만
+# 모델 선택용 검증셋으로 사용한다. 최종 모델은 train_processed.csv 전체로 재학습한다.
+VALIDATION_SIZE = 0.20
 
 MODEL_SPECS = {
     "logistic_regression": (
@@ -124,30 +118,25 @@ RESULT_COLUMNS = [
 ]
 
 
-def load_training_data(
-    data_path: Path = PROCESSED_DATA_PATH,
-) -> tuple[pd.DataFrame, pd.Series]:
-    """전처리 데이터를 불러오고 퇴사 타깃을 Left=1로 변환한다."""
+def load_processed_data(data_path: Path) -> tuple[pd.DataFrame, pd.Series]:
+    """전처리 데이터를 불러오고 피처와 타깃 형식을 검증한다."""
 
     if not data_path.exists():
-        raise FileNotFoundError(f"학습 데이터가 없습니다: {data_path}")
+        raise FileNotFoundError(f"전처리 데이터가 없습니다: {data_path}")
 
     data = pd.read_csv(data_path)
     if TARGET_COLUMN not in data.columns:
         raise ValueError(f"타깃 컬럼이 없습니다: {TARGET_COLUMN}")
 
-    # CSV 타깃이 숫자 0/1인지 확인하고, 변환 불가능한 값은 오류로 처리한다.
-    encoded_target = pd.to_numeric(data[TARGET_COLUMN], errors="coerce")
-    if encoded_target.isna().any():
+    # 전처리 단계에서 이미 Left=1, Stayed=0으로 저장되므로 여기서는 다시 뒤집지 않는다.
+    target = pd.to_numeric(data[TARGET_COLUMN], errors="coerce")
+    if target.isna().any():
         raise ValueError("전처리 타깃에 숫자로 변환할 수 없는 값이 있습니다.")
 
-    unexpected_labels = set(encoded_target.unique()) - set(PROCESSED_TARGET_MAPPING)
+    unexpected_labels = set(target.unique()) - {0, 1}
     if unexpected_labels:
         labels = ", ".join(map(str, sorted(unexpected_labels)))
         raise ValueError(f"예상하지 못한 타깃 값입니다: {labels}")
-
-    # 저장된 Left=0, Stayed=1을 학습 기준인 Left=1, Stayed=0으로 뒤집는다.
-    target = encoded_target.map(PROCESSED_TARGET_MAPPING)
 
     # pandas가 CSV 저장 인덱스를 Unnamed: 0 같은 이름으로 읽으므로 입력에서 제외한다.
     saved_index_columns = [column for column in data.columns if column.startswith("Unnamed:")]
@@ -157,7 +146,7 @@ def load_training_data(
     bool_columns = features.select_dtypes(include="bool").columns
     features[bool_columns] = features[bool_columns].astype("int8")
 
-    # train_processed.csv가 완전히 수치화됐는지 마지막으로 검증한다.
+    # 전처리 CSV가 완전히 수치화됐는지 마지막으로 검증한다.
     non_numeric_columns = features.select_dtypes(exclude="number").columns.tolist()
     if non_numeric_columns:
         raise ValueError("전처리되지 않은 피처가 있습니다: " + ", ".join(non_numeric_columns))
@@ -165,45 +154,50 @@ def load_training_data(
     return features, target.astype("int8").rename(TARGET_COLUMN)
 
 
-def make_shared_splits(
+def load_train_test_data(
+    train_path: Path = TRAIN_DATA_PATH,
+    test_path: Path = TEST_DATA_PATH,
+) -> tuple[pd.DataFrame, pd.Series, pd.DataFrame, pd.Series]:
+    """별도로 전처리된 학습·최종 테스트 데이터를 불러오고 스키마를 확인한다."""
+
+    train_features, train_target = load_processed_data(train_path)
+    test_features, test_target = load_processed_data(test_path)
+
+    if list(train_features.columns) != list(test_features.columns):
+        missing_from_test = sorted(set(train_features.columns) - set(test_features.columns))
+        extra_in_test = sorted(set(test_features.columns) - set(train_features.columns))
+        raise ValueError(
+            "학습/테스트 피처 구성이 다릅니다. "
+            f"테스트에 없음={missing_from_test}, 테스트에만 있음={extra_in_test}"
+        )
+
+    return train_features, train_target, test_features, test_target
+
+
+def make_train_validation_split(
     features: pd.DataFrame,
     target: pd.Series,
 ) -> tuple[
     pd.DataFrame,
     pd.DataFrame,
-    pd.DataFrame,
-    pd.Series,
     pd.Series,
     pd.Series,
 ]:
-    """모든 모델이 함께 사용할 60/20/20 계층 분할을 생성한다."""
+    """train_processed.csv를 공통 학습 80%, 검증 20%로 계층 분할한다."""
 
-    # 먼저 전체의 20%를 최종 테스트셋으로 분리한다.
-    # stratify를 사용해 퇴사/재직 비율을 원본과 비슷하게 유지한다.
-    development_features, test_features, development_target, test_target = train_test_split(
+    # 별도 test_processed.csv에는 손대지 않고, 학습 데이터에서 검증셋만 분리한다.
+    train_features, validation_features, train_target, validation_target = train_test_split(
         features,
         target,
-        test_size=FINAL_TEST_SIZE,
+        test_size=VALIDATION_SIZE,
         random_state=RANDOM_STATE,
         stratify=target,
-    )
-
-    # 남은 개발 데이터의 25%를 검증셋으로 분리한다.
-    # 결과적으로 전체 데이터는 학습 60%, 검증 20%, 최종 테스트 20%가 된다.
-    train_features, validation_features, train_target, validation_target = train_test_split(
-        development_features,
-        development_target,
-        test_size=VALIDATION_SIZE_WITHIN_DEVELOPMENT,
-        random_state=RANDOM_STATE,
-        stratify=development_target,
     )
     return (
         train_features,
         validation_features,
-        test_features,
         train_target,
         validation_target,
-        test_target,
     )
 
 
@@ -335,17 +329,17 @@ def train_candidates(
 def refit_best_model(
     best_model_name: str,
     factory: Callable[[], Any],
-    development_features: pd.DataFrame,
-    development_target: pd.Series,
+    training_features: pd.DataFrame,
+    training_target: pd.Series,
     test_features: pd.DataFrame,
     test_target: pd.Series,
 ) -> tuple[Pipeline, dict[str, Any]]:
-    """선정된 모델을 학습+검증 데이터로 재학습하고 최종 테스트를 한 번 수행한다."""
+    """선정된 모델을 전체 학습 데이터로 재학습하고 외부 테스트를 한 번 수행한다."""
 
-    # 검증 과정에서 선택된 모델을 더 많은 개발 데이터로 처음부터 다시 학습한다.
-    model = create_training_pipeline(factory(), development_features)
+    # 검증 과정에서 선택된 모델을 train_processed.csv 전체로 처음부터 다시 학습한다.
+    model = create_training_pipeline(factory(), training_features)
     started_at = perf_counter()
-    model.fit(development_features, development_target)
+    model.fit(training_features, training_target)
     elapsed = perf_counter() - started_at
 
     metrics = evaluate_model(model, test_features, test_target)
@@ -387,16 +381,14 @@ def run_training(
 ) -> tuple[pd.DataFrame, dict[str, Any], dict[str, str]]:
     """공통 ML 학습 흐름을 실행하고 검증표와 최종 테스트 결과를 반환한다."""
 
-    features, target = load_training_data()
+    features, target, test_features, test_target = load_train_test_data()
 
     (
         train_features,
         validation_features,
-        test_features,
         train_target,
         validation_target,
-        test_target,
-    ) = make_shared_splits(features, target)
+    ) = make_train_validation_split(features, target)
 
     factories, unavailable = load_model_factories(selected)
 
@@ -410,13 +402,12 @@ def run_training(
 
     best_model_name = str(leaderboard.iloc[0]["model"])
 
-    development_features = pd.concat([train_features, validation_features]).sort_index()
-    development_target = pd.concat([train_target, validation_target]).sort_index()
+    # 모델 선택이 끝났으므로 최종 모델은 train_processed.csv 전체로 재학습한다.
     best_model, final_metrics = refit_best_model(
         best_model_name,
         factories[best_model_name],
-        development_features,
-        development_target,
+        features,
+        target,
         test_features,
         test_target,
     )
