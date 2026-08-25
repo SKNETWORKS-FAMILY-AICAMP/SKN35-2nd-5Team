@@ -1,1 +1,5 @@
 data/duolingo_churn_dataset.csv filter=lfs diff=lfs merge=lfs -text
+*.py text eol=lf
+*.md text eol=lf
+*.toml text eol=lf
+*.json text eol=lf
