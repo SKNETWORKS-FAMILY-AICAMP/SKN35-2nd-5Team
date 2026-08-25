@@ -4,7 +4,7 @@ POSITIVE_LABEL = "Left"
 NEGATIVE_LABEL = "Stayed"
 RANDOM_STATE = 42
 TEST_SIZE = 0.2
-VAL_SIZE = 0.5
+VAL_SIZE = 0.2
 
 MODEL_NAMES = (
     "logistic_regression",
