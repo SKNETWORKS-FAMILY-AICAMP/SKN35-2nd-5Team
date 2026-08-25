@@ -8,11 +8,10 @@ from xgboost import XGBClassifier
 from .train import (
     create_common_preprocessor,
     create_training_pipeline,
-    load_training_data,
-    make_shared_splits,
+    load_train_test_data,
+    make_train_validation_split,
 )
 from .utils import RANDOM_STATE, evaluate_model
-
 
 # 모든 튜닝 단계에서 동일한 교차검증 조건을 사용한다.
 CV_FOLDS = 5
@@ -186,12 +185,12 @@ def find_best_iteration(
 
 
 def train_final_model(
-    X_development: pd.DataFrame,
-    y_development: pd.Series,
+    X_full_train: pd.DataFrame,
+    y_full_train: pd.Series,
     best_params: dict,
     best_iteration: int,
 ) -> Pipeline:
-    """학습+검증 데이터로 튜닝된 최종 XGBoost Pipeline을 학습한다."""
+    """train_processed.csv 전체로 튜닝된 최종 XGBoost Pipeline을 학습한다."""
 
     print()
     print("=" * 70)
@@ -211,8 +210,8 @@ def train_final_model(
         verbosity=0,
     )
 
-    pipeline = create_training_pipeline(model, X_development)
-    pipeline.fit(X_development, y_development)
+    pipeline = create_training_pipeline(model, X_full_train)
+    pipeline.fit(X_full_train, y_full_train)
     return pipeline
 
 
@@ -222,15 +221,13 @@ def run_tuning(
 ) -> tuple[Pipeline, dict, dict, int]:
     """공통 데이터 구조로 전체 XGBoost 튜닝과 최종 평가를 실행한다."""
 
-    X, y = load_training_data()
+    X, y, X_test, y_test = load_train_test_data()
     (
         X_train,
         X_valid,
-        X_test,
         y_train,
         y_valid,
-        y_test,
-    ) = make_shared_splits(X, y)
+    ) = make_train_validation_split(X, y)
 
     print()
     print("=" * 70)
@@ -238,7 +235,7 @@ def run_tuning(
     print("=" * 70)
     print(f"학습 데이터: {len(X_train):,}개")
     print(f"검증 데이터: {len(X_valid):,}개")
-    print(f"최종 테스트 데이터: {len(X_test):,}개")
+    print(f"외부 최종 테스트 데이터: {len(X_test):,}개")
 
     cv = StratifiedKFold(
         n_splits=CV_FOLDS,
@@ -274,16 +271,15 @@ def run_tuning(
         best_params,
     )
 
-    # 모델 선정과 트리 수 결정이 끝난 뒤 학습셋과 검증셋을 합친다.
-    X_development = pd.concat([X_train, X_valid]).sort_index()
-    y_development = pd.concat([y_train, y_valid]).sort_index()
+    # 모델 선정과 트리 수 결정이 끝났으므로 train_processed.csv 전체로 재학습한다.
     final_model = train_final_model(
-        X_development,
-        y_development,
+        X,
+        y,
         best_params,
         best_iteration,
     )
 
+    # test_processed.csv는 튜닝에 사용하지 않고 여기서 마지막으로 한 번만 평가한다.
     metrics = evaluate_model(final_model, X_test, y_test)
     return final_model, metrics, best_params, best_iteration
 
