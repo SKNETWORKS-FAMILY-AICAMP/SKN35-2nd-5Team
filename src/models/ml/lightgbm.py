@@ -1,0 +1,9 @@
+"""LightGBM 모델 구현 파일.
+
+데이터 로딩·분할·평가·저장은 ``train.py``가 공통으로 처리한다.
+이 파일에서는 아래 import를 사용해 ``create_lightgbm()``만 구현하면 된다.
+"""
+
+from lightgbm import LGBMClassifier  # noqa: F401
+
+from .utils import RANDOM_STATE  # noqa: F401
