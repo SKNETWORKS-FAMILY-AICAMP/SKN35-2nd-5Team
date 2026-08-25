@@ -1,4 +1,3 @@
-# src/models/mlp_model.py
 import torch.nn as nn
 
 
