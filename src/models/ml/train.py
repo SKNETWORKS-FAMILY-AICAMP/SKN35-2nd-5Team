@@ -36,8 +36,6 @@ ID_COLUMNS = ("Employee ID", "EmployeeNumber")
 # LabelEncoder의 알파벳 정렬에 맡기지 않아 타깃 방향이 뒤집히는 문제를 방지한다.
 TARGET_MAPPING = {"Left": 1, "Stayed": 0}
 
-# 각 모델 파일과 해당 파일이 제공해야 하는 생성 함수 이름이다.
-# 팀원은 담당 모델 파일에 아래 생성 함수만 구현하면 공통 학습에 자동으로 포함된다.
 MODEL_SPECS = {
     "logistic_regression": (
         "logistic_regression",
@@ -57,7 +55,6 @@ MODEL_SPECS = {
     ),
 }
 
-# 모든 모델이 동일한 순서와 이름으로 결과표를 만들도록 출력 컬럼을 고정한다.
 RESULT_COLUMNS = [
     "model",
     "accuracy",
@@ -80,7 +77,6 @@ def load_training_data(
 ) -> tuple[pd.DataFrame, pd.Series]:
     """원본 데이터를 불러오고 퇴사 타깃을 Left=1로 명시 변환한다."""
 
-    # 잘못된 실행 경로나 누락된 데이터 파일을 초기에 확인한다.
     if not data_path.exists():
         raise FileNotFoundError(f"학습 데이터가 없습니다: {data_path}")
 
@@ -88,18 +84,15 @@ def load_training_data(
     if TARGET_COLUMN not in data.columns:
         raise ValueError(f"타깃 컬럼이 없습니다: {TARGET_COLUMN}")
 
-    # Left와 Stayed 이외의 예상하지 못한 값이 있으면 잘못 학습하지 않고 중단한다.
     unexpected_labels = set(data[TARGET_COLUMN].dropna().unique()) - set(TARGET_MAPPING)
     if unexpected_labels:
         labels = ", ".join(map(str, sorted(unexpected_labels)))
         raise ValueError(f"예상하지 못한 타깃 값입니다: {labels}")
 
-    # 퇴사자는 1, 재직자는 0으로 변환한다.
     target = data[TARGET_COLUMN].map(TARGET_MAPPING)
     if target.isna().any():
         raise ValueError("타깃에 결측치 또는 변환되지 않은 값이 있습니다.")
 
-    # 타깃과 직원 식별자는 예측 입력 피처에서 제외한다.
     drop_columns = [TARGET_COLUMN, *[column for column in ID_COLUMNS if column in data.columns]]
     features = data.drop(columns=drop_columns)
     return features, target.astype("int8").rename(TARGET_COLUMN)
@@ -150,17 +143,13 @@ def make_shared_splits(
 def create_common_preprocessor(features: pd.DataFrame) -> ColumnTransformer:
     """현재 학습 분할에만 fit되는 공통 전처리기를 생성한다."""
 
-    # 데이터 타입을 기준으로 수치형과 범주형 컬럼을 자동 구분한다.
     numeric_columns = features.select_dtypes(include="number").columns.tolist()
     categorical_columns = features.select_dtypes(exclude="number").columns.tolist()
 
-    # 수치형 결측치는 학습 데이터의 중앙값으로 채운다.
     numeric_pipeline = Pipeline(
         steps=[("imputer", SimpleImputer(strategy="median"))]
     )
 
-    # 범주형 결측치는 최빈값으로 채우고 원핫 인코딩한다.
-    # 검증/테스트에 처음 등장한 범주는 오류 없이 무시한다.
     categorical_pipeline = Pipeline(
         steps=[
             ("imputer", SimpleImputer(strategy="most_frequent")),
@@ -175,7 +164,6 @@ def create_common_preprocessor(features: pd.DataFrame) -> ColumnTransformer:
         ]
     )
 
-    # 두 종류의 전처리를 원래 컬럼에 각각 적용한 뒤 하나의 배열로 결합한다.
     return ColumnTransformer(
         transformers=[
             ("numeric", numeric_pipeline, numeric_columns),
@@ -200,7 +188,6 @@ def create_training_pipeline(
             ("model", model),
         ]
     )
-
 
 def load_model_factories(
     selected: list[str] | tuple[str, ...] | None = None,
@@ -334,10 +321,8 @@ def run_training(
 ) -> tuple[pd.DataFrame, dict[str, Any], dict[str, str]]:
     """공통 ML 학습 흐름을 실행하고 검증표와 최종 테스트 결과를 반환한다."""
 
-    # 1. 원본 데이터 로드 및 타깃 변환
     features, target = load_training_data()
 
-    # 2. 모든 모델이 함께 사용할 데이터 분할 생성
     (
         train_features,
         validation_features,
@@ -347,10 +332,8 @@ def run_training(
         test_target,
     ) = make_shared_splits(features, target)
 
-    # 3. 구현이 완료된 모델 생성 함수만 불러오기
     factories, unavailable = load_model_factories(selected)
 
-    # 4. 동일한 학습/검증 데이터로 후보 모델 비교
     leaderboard, candidate_models = train_candidates(
         factories,
         train_features,
@@ -359,10 +342,8 @@ def run_training(
         validation_target,
     )
 
-    # 5. 검증 ROC-AUC 1위 모델 선택
     best_model_name = str(leaderboard.iloc[0]["model"])
 
-    # 6. 학습셋과 검증셋을 합쳐 최종 모델 재학습
     development_features = pd.concat([train_features, validation_features]).sort_index()
     development_target = pd.concat([train_target, validation_target]).sort_index()
     best_model, final_metrics = refit_best_model(
@@ -374,7 +355,6 @@ def run_training(
         test_target,
     )
 
-    # 7. 실제 실행에서는 산출물을 저장하고, 테스트에서는 저장을 끌 수 있다.
     if save_artifacts:
         save_training_artifacts(
             leaderboard,
