@@ -29,9 +29,8 @@ st.markdown(
 1. **EDA** — 데이터 품질, 분포, 그룹별 이탈률 확인
 2. **ML Training** — Logistic Regression, Random Forest, XGBoost, LightGBM 비교
 3. **Model Comparison** — ROC/PR 곡선과 리더보드 확인
-4–7. **확장 예정** — 피처 엔지니어링, 군집화, 튜닝 단계
-8. **SHAP Analysis** — 최고 모델의 중요 피처 해석
-9. **Retention Action** — 고위험 직원 후보와 검토 액션 제안
+4. **SHAP Analysis** — 최고 모델의 중요 피처 해석
+5. **Retention Action** — 고위험 직원 후보와 검토 액션 제안
 """
 )
 st.info("왼쪽 사이드바에서 분석 단계를 선택하세요. 학습 결과는 artifacts/에 저장됩니다.")
