@@ -1,5 +1,5 @@
 """
-머신러닝 모델 공통 학습·비교 관리자  
+머신러닝 모델 공통 학습·비교 관리자
 =====================================
 
 (모델 짜기전에 먼저 읽어야 함!!!!!)
@@ -69,13 +69,10 @@ from sklearn.preprocessing import OneHotEncoder
 
 from .utils import RANDOM_STATE, TARGET_COLUMN, evaluate_model
 
-
 # 현재 파일 위치를 기준으로 프로젝트 최상위 경로를 계산한다.
 # 실행 위치가 달라져도 데이터와 산출물 경로가 바뀌지 않도록 절대 경로를 사용한다.
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
-PROCESSED_DATA_PATH = (
-    PROJECT_ROOT / "data" / "preprocessing" / "train_processed.csv"
-)
+PROCESSED_DATA_PATH = PROJECT_ROOT / "data" / "preprocessing" / "train_processed.csv"
 MODELS_DIR = PROJECT_ROOT / "artifacts" / "models"
 REPORTS_DIR = PROJECT_ROOT / "artifacts" / "reports"
 LEADERBOARD_PATH = REPORTS_DIR / "ml_leaderboard.csv"
@@ -153,9 +150,7 @@ def load_training_data(
     target = encoded_target.map(PROCESSED_TARGET_MAPPING)
 
     # pandas가 CSV 저장 인덱스를 Unnamed: 0 같은 이름으로 읽으므로 입력에서 제외한다.
-    saved_index_columns = [
-        column for column in data.columns if column.startswith("Unnamed:")
-    ]
+    saved_index_columns = [column for column in data.columns if column.startswith("Unnamed:")]
     features = data.drop(columns=[TARGET_COLUMN, *saved_index_columns])
 
     # 원핫 인코딩 결과가 True/False로 저장된 경우 모델 입력용 0/1로 변환한다.
@@ -165,9 +160,7 @@ def load_training_data(
     # train_processed.csv가 완전히 수치화됐는지 마지막으로 검증한다.
     non_numeric_columns = features.select_dtypes(exclude="number").columns.tolist()
     if non_numeric_columns:
-        raise ValueError(
-            "전처리되지 않은 피처가 있습니다: " + ", ".join(non_numeric_columns)
-        )
+        raise ValueError("전처리되지 않은 피처가 있습니다: " + ", ".join(non_numeric_columns))
 
     return features, target.astype("int8").rename(TARGET_COLUMN)
 
@@ -220,9 +213,7 @@ def create_common_preprocessor(features: pd.DataFrame) -> ColumnTransformer:
     numeric_columns = features.select_dtypes(include="number").columns.tolist()
     categorical_columns = features.select_dtypes(exclude="number").columns.tolist()
 
-    numeric_pipeline = Pipeline(
-        steps=[("imputer", SimpleImputer(strategy="median"))]
-    )
+    numeric_pipeline = Pipeline(steps=[("imputer", SimpleImputer(strategy="median"))])
 
     categorical_pipeline = Pipeline(
         steps=[
@@ -262,6 +253,7 @@ def create_training_pipeline(
             ("model", model),
         ]
     )
+
 
 def load_model_factories(
     selected: list[str] | tuple[str, ...] | None = None,
