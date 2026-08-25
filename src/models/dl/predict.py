@@ -4,25 +4,26 @@ import torch
 from src.models.dl.mlp_model import MLPClassifier
 
 
-# 예측에 필요한 3가지(구조, 가중치, 스케일러)를 모두 불러와 반환
 def load_mlp_pipeline():
     best_params = joblib.load("artifacts/dl/mlp_best_params.pkl")
     scaler = joblib.load("artifacts/dl/mlp_scaler.pkl")
-
+    threshold = joblib.load("artifacts/dl/mlp_threshold.pkl")
     model = MLPClassifier(best_params, in_features=41)
-    model.load_state_dict(torch.load("artifacts/dl/mlp_model.pt"))
+
+    model.load_state_dict(torch.load("artifacts/dl/mlp_model.pt", map_location="cpu"))
     model.eval()
 
-    return model, scaler
+    return model, scaler, threshold
 
 
 def predict(new_data_df):
-    model, scaler = load_mlp_pipeline()
+    model, scaler, threshold = load_mlp_pipeline()
     X_scaled = scaler.transform(new_data_df)
     X_tensor = torch.tensor(X_scaled, dtype=torch.float32)
 
     with torch.no_grad():
-        prob = torch.sigmoid(model(X_tensor))
-        pred = (prob >= 0.5).float()
+        logits = model(X_tensor)
+        probs = torch.sigmoid(logits).squeeze()
+        preds = (probs >= threshold).float()
 
-    return pred
+    return preds.numpy(), probs.numpy()
