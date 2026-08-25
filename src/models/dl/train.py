@@ -6,36 +6,35 @@ import optuna
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from sklearn.metrics import f1_score
+from sklearn.metrics import (
+    f1_score,
+    precision_score,
+    recall_score,
+)
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from torch.utils.data import DataLoader, TensorDataset
 
-from src.data.loader import load_processed_train
+from src.data.loader import load_processed_test, load_processed_train
 from src.models.dl.mlp_model import MLPClassifier
-from src.utils.constants import RANDOM_STATE, TEST_SIZE, VAL_SIZE
+from src.utils.constants import RANDOM_STATE, VAL_SIZE
 from src.utils.metrics import evaluate_model
 
 
-def prepare_dataloaders(df, target_col="Attrition", batch_size=64):
-    X = df.drop(columns=[target_col])
-    y = df[target_col]
+def prepare_dataloaders(train_df, test_df, target_col="Attrition", batch_size=64):
+    X = train_df.drop(columns=[target_col])
+    y = train_df[target_col]
 
-    X_train, X_temp, y_train, y_temp = train_test_split(
+    X_train, X_val, y_train, y_val = train_test_split(
         X,
         y,
-        test_size=TEST_SIZE,
+        test_size=VAL_SIZE,
         stratify=y,
         random_state=RANDOM_STATE,
     )
 
-    X_val, X_test, y_val, y_test = train_test_split(
-        X_temp,
-        y_temp,
-        test_size=VAL_SIZE,
-        stratify=y_temp,
-        random_state=RANDOM_STATE,
-    )
+    X_test = test_df.drop(columns=[target_col])
+    y_test = test_df[target_col]
 
     scaler = StandardScaler()
 
@@ -340,6 +339,8 @@ def find_best_threshold(
     max_threshold=0.9,
     step=0.01,
 ):
+    results = []
+
     best_threshold = 0.5
     best_f1 = 0.0
 
@@ -348,21 +349,57 @@ def find_best_threshold(
     while threshold <= max_threshold:
         y_pred = (y_proba >= threshold).astype(int)
 
+        precision = precision_score(
+            y_true,
+            y_pred,
+            zero_division=0,
+        )
+
+        recall = recall_score(
+            y_true,
+            y_pred,
+            zero_division=0,
+        )
+
         f1 = f1_score(
             y_true,
             y_pred,
             zero_division=0,
         )
 
+        results.append(
+            {
+                "threshold": threshold,
+                "precision": precision,
+                "recall": recall,
+                "f1": f1,
+            }
+        )
+
         if f1 > best_f1:
             best_f1 = f1
             best_threshold = threshold
 
-        threshold += step
+        threshold = round(threshold + step, 10)
 
     print("\n[ Threshold Optimization ]")
     print(f"Best Threshold : {best_threshold:.2f}")
     print(f"Best Validation F1 : {best_f1:.4f}")
+
+    print("\n[ Threshold Comparison ]")
+    print(f"{'Threshold':<12}{'Precision':<12}{'Recall':<12}{'F1':<12}")
+    print("-" * 48)
+
+    for result in results:
+        threshold = result["threshold"]
+
+        if abs(threshold - best_threshold) < 0.001 or abs((threshold * 100) % 5) < 0.001:
+            print(
+                f"{threshold:<12.2f}"
+                f"{result['precision']:<12.4f}"
+                f"{result['recall']:<12.4f}"
+                f"{result['f1']:<12.4f}"
+            )
 
     return best_threshold
 
@@ -372,7 +409,8 @@ def apply_threshold(y_proba, threshold):
 
 
 def main():
-    df = load_processed_train()
+    train_df = load_processed_train()
+    test_df = load_processed_test()
 
     (
         train_loader,
@@ -380,7 +418,7 @@ def main():
         test_loader,
         scaler,
         in_features,
-    ) = prepare_dataloaders(df)
+    ) = prepare_dataloaders(train_df, test_df)
 
     print("\n[ DataLoader ]")
     print(f"Train batches : {len(train_loader)}")
