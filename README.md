@@ -17,20 +17,72 @@
 
 ## 구성
 
-\`\`\`text
+# 프로젝트 구조
+
+```text
 .
-├─ main.py
-├─ data/
-├─ src/
-│  ├─ load_data/     # CSV 로딩 및 검증
-│  ├─ analysis/      # EDA 및 리텐션 제안
-│  ├─ ml/            # 모델별 독립 파일, 전처리, 평가, SHAP, 군집화
-│  └─ utils/         # 상수 및 경로
-├─ pages/            # Streamlit 멀티페이지
-├─ scripts/          # 일괄 실행 CLI
-├─ tests/            # 단위 테스트
-└─ artifacts/        # 실행 시 생성되는 모델 및 리포트
-\`\`\`
+├── README.md                         # 프로젝트 설명 및 실행 방법
+│
+├── artifacts/                        # 학습 결과물 저장
+│   ├── dl/                           # 딥러닝 모델 결과물
+│   │   ├── mlp_best_params.pkl       # MLP 최적 하이퍼파라미터
+│   │   ├── mlp_model.pt              # 학습된 MLP 모델
+│   │   └── mlp_scaler.pkl            # MLP 전처리에 사용한 Scaler
+│   │
+│   └── ml/                           # 머신러닝 모델 결과물
+│
+├── data/                             # 프로젝트 데이터
+│   ├── preprocessing/                # 전처리된 데이터
+│   │   └── train_processed.csv       # 전처리 완료된 학습 데이터
+│   │
+│   └── raw/                          # 원본 데이터
+│       ├── test.csv                  # 테스트용 원본 데이터
+│       └── train.csv                 # 학습용 원본 데이터
+│
+├── main.py                           # Streamlit 애플리케이션 실행 진입점
+│
+├── notebooks/                        # 데이터 분석 및 모델 실험용 Jupyter Notebook
+│   ├── dl/                           # 딥러닝 실험
+│   │   └── mlp.ipynb                 # MLP 모델 실험 및 학습 과정
+│   │
+│   ├── ml/                           # 머신러닝 실험
+│   │
+│   └── preprocessing/                # 데이터 전처리 실험
+│       └── processing.ipynb          # 데이터 탐색 및 전처리 과정
+│
+├── pyproject.toml                    # Python 프로젝트 설정 및 의존성 관리
+│
+├── src/                              # 실제 프로젝트에서 사용하는 소스 코드
+│   ├── __init__.py                   # Python 패키지 초기화
+│   ├── config.py                     # 프로젝트 전반의 설정값 관리
+│   │
+│   ├── data/                         # 데이터 처리 관련 코드
+│   │   ├── loader.py                 # 데이터 로딩
+│   │   └── preprocess.py             # 데이터 전처리 로직
+│   │
+│   ├── models/                       # 머신러닝 / 딥러닝 모델 관련 코드
+│   │   ├── dl/                       # 딥러닝
+│   │   │   ├── mlp_model.py          # MLP 모델 구조 정의
+│   │   │   └── train.py              # 딥러닝 모델 학습 및 저장
+│   │   │   └── predict.py            # 딥러닝 모델 예측
+│   │   │
+│   │   └── ml/                       # 머신러닝 모델
+│   │
+│   ├── pages/                        # Streamlit 페이지
+│   │   ├── 01_EDA.py                 # 데이터 탐색 및 EDA 화면
+│   │   ├── 02_ML_Training.py         # 머신러닝 학습 화면
+│   │   ├── 03_Model_Comparison.py    # 모델 성능 비교 화면
+│   │   ├── 08_SHAP_Analysis.py       # SHAP 기반 모델 해석 화면
+│   │   └── 09_Retention_Action.py    # 이탈 예측 결과 및 대응 전략 화면
+│   │
+│   └── utils/                        # 여러 곳에서 공통으로 사용하는 기능
+│       ├── __init__.py               # Python 패키지 초기화
+│       ├── constants.py              # 공통 상수 및 설정값
+│       ├── metrics.py                # 모델 평가 지표 관련 함수
+│       └── paths.py                  # 프로젝트 파일 경로 관리
+│
+└── uv.lock                           # uv를 통한 패키지 버전 및 의존성 고정
+```
 
 ## 설치 및 실행
 
