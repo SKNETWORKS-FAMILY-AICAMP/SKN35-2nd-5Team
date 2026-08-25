@@ -1,4 +1,4 @@
-"""XGBoost model definition."""
+"""튜닝 전 비교에 사용할 XGBoost 이진 분류 모델 정의."""
 
 from xgboost import XGBClassifier
 
@@ -6,39 +6,22 @@ from .utils import RANDOM_STATE
 
 
 def create_xgboost() -> XGBClassifier:
+    """직원 퇴사 여부를 예측하는 XGBoost 베이스라인 모델을 생성한다.
+
+    이전 트리의 오차를 다음 트리가 순차적으로 보완하는 부스팅 모델이다.
+    하이퍼파라미터 튜닝 전이므로 과도한 최적화 없이 비교 기준값만 설정한다.
     """
-    XGBoost 모델을 생성한다.
 
-    이전 Tree가 틀린 데이터를 다음 Tree가
-    순차적으로 보완하는 Boosting 기반 모델이다.
-    """
-
-    model = XGBClassifier(
-
-        # 생성할 Tree 개수
-        n_estimators=200,
-
-        # 각각의 Tree 최대 깊이
+    return XGBClassifier(
+        objective="binary:logistic",
+        n_estimators=200,   # 성능향상할때 조정 가능
         max_depth=6,
-
-        # 이전 Tree의 결과를 다음 Tree가
-        # 얼마나 강하게 보완할지 결정
         learning_rate=0.1,
-
-        # 각 Tree 학습 시 전체 데이터의 90% 사용
         subsample=0.9,
-
-        # 각 Tree 학습 시 전체 Feature의 90% 사용
         colsample_bytree=0.9,
-
-        # 이진 분류 확률 성능 평가 방법
-        eval_metric="logloss",
-
-        # 동일한 결과 재현
+        eval_metric="auc",
+        tree_method="hist",         # 히스토그램 알고리즘
         random_state=RANDOM_STATE,
-
-        # CPU 전체 사용
         n_jobs=-1,
+        verbosity=0,
     )
-
-    return model
