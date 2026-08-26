@@ -10,8 +10,8 @@ def main():
     train_processed = preprocess_pipeline(train_raw)
     test_processed = preprocess_pipeline(test_raw, reference=train_raw)
 
-    train_processed.to_csv(PROCESSED_DIR / "train_processed_v2.csv", index=False)
-    test_processed.to_csv(PROCESSED_DIR / "test_processed_v2.csv", index=False)
+    train_processed.to_csv(PROCESSED_DIR / "train_processed.csv", index=False)
+    test_processed.to_csv(PROCESSED_DIR / "test_processed.csv", index=False)
 
     print("train_processed shape:", train_processed.shape)
     print("test_processed shape:", test_processed.shape)
