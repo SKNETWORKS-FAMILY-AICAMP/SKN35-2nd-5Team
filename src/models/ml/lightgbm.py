@@ -1,9 +1,19 @@
-"""LightGBM 모델 구현 파일.
+"""공통 학습 구조에서 사용할 LightGBM 기본 모델 정의."""
 
-데이터 로딩·분할·평가·저장은 ``train.py``가 공통으로 처리한다.
-이 파일에서는 아래 import를 사용해 ``create_lightgbm()``만 구현하면 된다.
-"""
+from lightgbm import LGBMClassifier
 
-from lightgbm import LGBMClassifier  # noqa: F401
+from .utils import RANDOM_STATE
 
-from .utils import RANDOM_STATE  # noqa: F401
+
+def create_lightgbm() -> LGBMClassifier:
+   
+    return LGBMClassifier(
+        boosting_type="gbdt",
+        objective="binary",
+        n_estimators=200,
+        learning_rate=0.05,
+        num_leaves=31,
+        random_state=RANDOM_STATE,
+        n_jobs=-1,
+        verbosity=-1,
+    )
