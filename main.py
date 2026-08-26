@@ -11,7 +11,7 @@ st.set_page_config(
 
 apply_page_style()
 page_header(
-    "EMPLOYEE ATTRITION LAB",
+    "직원 퇴사 예측 연구",
     "퇴사 예측 연구소 🌿",
     "직원 데이터를 차분히 살펴보고, 여러 모델의 결과와 개선 시나리오를 한곳에서 확인해요.",
 )
@@ -33,17 +33,17 @@ st.markdown(
     <div class="nav-grid">
         <a class="nav-card" href="/ML_Comparison" target="_self">
             <div class="nav-card-icon">🌳</div>
-            <div class="nav-card-title">ML 비교</div>
+            <div class="nav-card-title">머신러닝 비교</div>
             <div class="nav-card-description">기본·튜닝 모델의 검증 성능을 나란히 봐요.</div>
         </a>
         <a class="nav-card" href="/DL_Performance" target="_self">
             <div class="nav-card-icon">🧠</div>
-            <div class="nav-card-title">DL 성능</div>
+            <div class="nav-card-title">딥러닝 성능</div>
             <div class="nav-card-description">MLP 학습 결과가 저장되면 바로 표시해요.</div>
         </a>
         <a class="nav-card" href="/ML_vs_DL" target="_self">
             <div class="nav-card-icon">⚖️</div>
-            <div class="nav-card-title">ML vs DL</div>
+            <div class="nav-card-title">머신러닝과 딥러닝 비교</div>
             <div class="nav-card-description">두 계열의 최고 모델을 같은 지표로 비교해요.</div>
         </a>
         <a class="nav-card" href="/Final_Scenario_Test" target="_self">
@@ -55,4 +55,3 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
-
