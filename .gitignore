@@ -176,6 +176,4 @@ pyrightconfig.json
 # End of https://www.toptal.com/developers/gitignore/api/python
 
 # Generated model and report artifacts
-artifacts/models/*.joblib
-artifacts/reports/*.csv
-artifacts/reports/*.json
+
