@@ -5,19 +5,18 @@ import streamlit as st
 
 from streamlit_ui import apply_page_style, home_button, page_header
 
-st.set_page_config(page_title="DL 성능", page_icon="🧠", layout="wide")
+st.set_page_config(page_title="딥러닝 성능", page_icon="🧠", layout="wide")
 
 REPORT_PATH = Path("artifacts/reports/dl_metrics.csv")
 METRIC_LABELS = {
     "accuracy": "정확도",
     "precision": "정밀도",
     "recall": "재현율",
-    "f1": "F1",
-    "roc_auc": "ROC-AUC",
-    "average_precision": "PR-AUC",
-    "train_seconds": "학습 시간(초)",
-    "epochs": "학습 Epoch",
-    "final_loss": "최종 Loss",
+    "f1": "F1 점수",
+    "roc_auc": "ROC 곡선 면적",
+    "average_precision": "정밀도-재현율 곡선 면적",
+    "epochs": "학습 반복 횟수",
+    "final_loss": "최종 손실값",
 }
 
 
@@ -30,7 +29,7 @@ def load_dl_report(path: str, modified_time: float) -> pd.DataFrame:
 apply_page_style()
 home_button()
 page_header(
-    "DEEP LEARNING",
+    "딥러닝 모델 분석",
     "딥러닝 성능 🧠",
     "저장된 MLP의 성능과 학습 기록을 편하게 확인해요.",
 )
@@ -46,15 +45,15 @@ report = load_dl_report(str(REPORT_PATH), REPORT_PATH.stat().st_mtime)
 required_columns = {"model", "accuracy", "precision", "recall", "f1", "roc_auc"}
 missing_columns = required_columns.difference(report.columns)
 if missing_columns:
-    st.error(f"DL 리포트에 필요한 컬럼이 없습니다: {', '.join(sorted(missing_columns))}")
+    st.error(f"딥러닝 보고서에 필요한 항목이 없습니다: {', '.join(sorted(missing_columns))}")
     st.stop()
 
 best = report.sort_values(["roc_auc", "f1"], ascending=False).iloc[0]
 summary = st.columns(5)
 summary[0].metric("모델", str(best["model"]).upper())
 summary[1].metric("정확도", f"{best['accuracy']:.4f}")
-summary[2].metric("ROC-AUC", f"{best['roc_auc']:.4f}")
-summary[3].metric("F1", f"{best['f1']:.4f}")
+summary[2].metric("ROC 곡선 면적", f"{best['roc_auc']:.4f}")
+summary[3].metric("F1 점수", f"{best['f1']:.4f}")
 summary[4].metric("재현율", f"{best['recall']:.4f}")
 
 display_columns = ["model", *[column for column in METRIC_LABELS if column in report.columns]]
@@ -64,11 +63,10 @@ formats = {
     "정확도": "{:.4f}",
     "정밀도": "{:.4f}",
     "재현율": "{:.4f}",
-    "F1": "{:.4f}",
-    "ROC-AUC": "{:.4f}",
-    "PR-AUC": "{:.4f}",
-    "학습 시간(초)": "{:.2f}",
-    "최종 Loss": "{:.4f}",
+    "F1 점수": "{:.4f}",
+    "ROC 곡선 면적": "{:.4f}",
+    "정밀도-재현율 곡선 면적": "{:.4f}",
+    "최종 손실값": "{:.4f}",
 }
 
 st.subheader("딥러닝 모델 성능")
@@ -82,7 +80,14 @@ st.dataframe(
 
 chart_metrics = [
     column
-    for column in ["정확도", "정밀도", "재현율", "F1", "ROC-AUC", "PR-AUC"]
+    for column in [
+        "정확도",
+        "정밀도",
+        "재현율",
+        "F1 점수",
+        "ROC 곡선 면적",
+        "정밀도-재현율 곡선 면적",
+    ]
     if column in display.columns
 ]
 st.subheader("평가 지표")
@@ -97,4 +102,4 @@ if {"tn", "fp", "fn", "tp"}.issubset(report.columns):
     )
     st.dataframe(confusion, width="stretch")
 
-st.info("이 프로젝트의 공통 타깃은 퇴사(Left)=1, 재직(Stayed)=0이에요.")
+st.info("이 프로젝트의 공통 예측값은 퇴사=1, 재직=0이에요.")

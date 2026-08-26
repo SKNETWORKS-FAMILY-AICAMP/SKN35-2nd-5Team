@@ -1,3 +1,4 @@
+from math import ceil
 from pathlib import Path
 
 import joblib
@@ -8,6 +9,7 @@ import streamlit as st
 from src.data.loader import load_raw_test, load_raw_train
 from src.data.preprocess import preprocess_pipeline
 from streamlit_ui import apply_page_style, home_button, page_header
+from wheel_picker import wheel_picker_component
 
 st.set_page_config(page_title="퇴사 위험 시나리오", page_icon="✨", layout="wide")
 
@@ -28,6 +30,41 @@ ACTIONABLE_FEATURES = [
     "Company Reputation",
     "Employee Recognition",
 ]
+FEATURE_LABELS = {
+    "Job Role": "직무",
+    "Monthly Income": "월 소득",
+    "Work-Life Balance": "일과 삶의 균형",
+    "Job Satisfaction": "직무 만족도",
+    "Number of Promotions": "승진 횟수",
+    "Overtime": "초과 근무",
+    "Distance from Home": "출퇴근 거리",
+    "Job Level": "직급",
+    "Company Size": "회사 규모",
+    "Remote Work": "재택근무",
+    "Leadership Opportunities": "리더십 기회",
+    "Innovation Opportunities": "혁신 기회",
+    "Company Reputation": "회사 평판",
+    "Employee Recognition": "직원 인정",
+}
+VALUE_LABELS = {
+    "Yes": "예",
+    "No": "아니요",
+    "Low": "낮음",
+    "Medium": "보통",
+    "High": "높음",
+    "Very High": "매우 높음",
+    "Small": "소규모",
+    "Large": "대규모",
+    "Excellent": "매우 좋음",
+    "Good": "좋음",
+    "Fair": "보통",
+    "Poor": "나쁨",
+    "Education": "교육",
+    "Media": "미디어",
+    "Healthcare": "의료",
+    "Technology": "기술",
+    "Finance": "금융",
+}
 
 
 @st.cache_data
@@ -63,20 +100,46 @@ def attrition_probability(model, frame: pd.DataFrame) -> float:
     return float(model.predict_proba(frame)[0, classes.index(1)])
 
 
+def wheel_options(reference: pd.Series, current: int | float) -> list[int | float]:
+    """긴 숫자 목록은 휠이 가볍게 움직이도록 고르게 줄인다."""
+
+    values = sorted(reference.unique().tolist())
+    if len(values) > 121:
+        interval = ceil(len(values) / 120)
+        values = values[::interval]
+    values.append(current)
+    return sorted(set(values))
+
+
+def wheel_picker(
+    label: str,
+    options: list[int | float],
+    current: int | float,
+    key: str,
+) -> int | float:
+    labels = [f"{value:,}" if isinstance(value, int) else f"{value:,.1f}" for value in options]
+    selected = wheel_picker_component(
+        label=label,
+        options=options,
+        labels=labels,
+        value=current,
+        default=current,
+        key=key,
+    )
+    return type(current)(selected)
+
+
 apply_page_style()
 home_button()
 page_header(
-    "WHAT-IF SCENARIO",
+    "조건 변화 모의실험",
     "퇴사 위험 시나리오 ✨",
     "직원의 업무 조건을 조금씩 조정해 모델이 예상하는 퇴사 확률 변화를 살펴봐요.",
 )
-st.info(
-    "예측 변화는 인과관계가 아닌 가상 비교예요. "
-    "실제 인사 결정은 반드시 사람의 검토를 거쳐야 합니다."
-)
+
 
 if not MODEL_PATH.exists():
-    st.warning("최고 모델이 아직 없어요. 먼저 ML 학습 또는 튜닝을 실행해 주세요.")
+    st.warning("최고 모델이 아직 없어요. 먼저 머신러닝 학습 또는 튜닝을 실행해 주세요.")
     st.stop()
 
 try:
@@ -93,21 +156,20 @@ if not feature_names:
 
 selector_area, threshold_area = st.columns([2, 1])
 with selector_area:
-    employee_index = int(
-        st.number_input(
-            "살펴볼 테스트 직원의 행 번호",
-            min_value=0,
-            max_value=len(test_data) - 1,
-            value=0,
-            step=1,
-        )
+    employee_index = st.selectbox(
+        "살펴볼 테스트 직원 선택",
+        options=range(len(test_data)),
+        format_func=lambda index: (
+            f"행 {index:,} · 직원 번호 {test_data.iloc[index]['Employee ID']}"
+        ),
+        help="목록을 스크롤하거나 행 번호·직원 ID를 입력해 검색할 수 있어요.",
     )
 with threshold_area:
     threshold = st.slider("고위험 기준", 0.10, 0.90, 0.50, 0.05)
 
 source_row = test_data.iloc[employee_index].copy()
 employee_id = source_row.get("Employee ID", employee_index)
-st.caption(f"선택한 직원 ID · {employee_id}")
+st.caption(f"선택한 직원 번호 · {employee_id}")
 
 editable_features = [feature for feature in ACTIONABLE_FEATURES if feature in test_data.columns]
 adjusted_values: dict[str, object] = {}
@@ -120,21 +182,30 @@ with st.form("scenario_form"):
         current = source_row[feature]
         with widget_columns[index % 2]:
             if pd.api.types.is_numeric_dtype(reference):
-                adjusted_values[feature] = st.number_input(
-                    feature,
-                    min_value=float(reference.min()),
-                    max_value=float(reference.max()),
-                    value=float(current),
-                    step=1.0,
-                    key=f"scenario_{employee_index}_{feature}",
-                )
+                if pd.api.types.is_integer_dtype(reference):
+                    current_value = int(current)
+                    adjusted_values[feature] = wheel_picker(
+                        FEATURE_LABELS.get(feature, feature),
+                        wheel_options(reference.astype(int), current_value),
+                        current_value,
+                        key=f"scenario_{employee_index}_{feature}",
+                    )
+                else:
+                    current_value = float(current)
+                    adjusted_values[feature] = wheel_picker(
+                        FEATURE_LABELS.get(feature, feature),
+                        wheel_options(reference.astype(float), current_value),
+                        current_value,
+                        key=f"scenario_{employee_index}_{feature}",
+                    )
             else:
                 options = sorted(reference.astype(str).unique().tolist())
                 current_text = str(current)
                 adjusted_values[feature] = st.selectbox(
-                    feature,
+                    FEATURE_LABELS.get(feature, feature),
                     options,
                     index=options.index(current_text),
+                    format_func=lambda value: VALUE_LABELS.get(value, value),
                     key=f"scenario_{employee_index}_{feature}",
                 )
 
@@ -188,7 +259,11 @@ if submitted:
     st.bar_chart(result.set_index("시나리오"))
 
     changes = [
-        {"피처": feature, "조정 전": source_row[feature], "조정 후": adjusted_row[feature]}
+        {
+            "입력 항목": FEATURE_LABELS.get(feature, feature),
+            "조정 전": VALUE_LABELS.get(str(source_row[feature]), source_row[feature]),
+            "조정 후": VALUE_LABELS.get(str(adjusted_row[feature]), adjusted_row[feature]),
+        }
         for feature in editable_features
         if str(source_row[feature]) != str(adjusted_row[feature])
         and not (
