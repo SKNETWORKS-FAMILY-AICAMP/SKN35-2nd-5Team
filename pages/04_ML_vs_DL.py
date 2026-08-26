@@ -3,6 +3,9 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
+from streamlit_ui import apply_page_style, home_button, page_header
+
+st.set_page_config(page_title="ML vs DL", page_icon="⚖️", layout="wide")
 
 ML_REPORT_PATH = Path("artifacts/reports/ml_leaderboard.csv")
 DL_REPORT_PATH = Path("artifacts/reports/dl_metrics.csv")
@@ -29,8 +32,13 @@ def load_report(path: str, modified_time: float) -> pd.DataFrame:
     return pd.read_csv(path)
 
 
-st.title("4. 최고 ML vs 딥러닝")
-st.caption("머신러닝 1위 모델과 딥러닝 모델을 동일한 핵심 지표로 나란히 비교합니다.")
+apply_page_style()
+home_button()
+page_header(
+    "FINAL MATCH",
+    "최고 ML vs 딥러닝 ⚖️",
+    "각 계열의 가장 좋은 모델을 같은 평가 지표로 나란히 놓고 살펴봐요.",
+)
 
 missing_files = [
     str(path) for path in (ML_REPORT_PATH, DL_REPORT_PATH) if not path.exists()
@@ -77,7 +85,7 @@ comparison = pd.DataFrame(
 st.subheader("최종 성능 비교표")
 st.dataframe(
     comparison.style.format({label: "{:.4f}" for label in METRICS.values()}).highlight_max(
-        subset=list(METRICS.values()), color="#d1fae5"
+        subset=list(METRICS.values()), color="#dff3ea"
     ),
     width="stretch",
     hide_index=True,
@@ -103,8 +111,4 @@ with st.expander("지표별 차이 보기"):
         hide_index=True,
     )
 
-st.warning(
-    "현재 ML 리포트는 퇴사(Left)를 양성 클래스로, DL 전처리 데이터는 재직(Stayed)을 "
-    "1로 사용합니다. 정확도와 ROC-AUC는 참고할 수 있지만 정밀도·재현율·F1을 최종 비교하기 "
-    "전에는 타깃 정의를 통일해 다시 평가해야 합니다."
-)
+st.info("두 모델 모두 퇴사(Left)=1을 양성 클래스로 평가한 리포트일 때 가장 정확한 비교가 됩니다.")

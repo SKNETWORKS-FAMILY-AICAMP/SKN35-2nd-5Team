@@ -3,6 +3,9 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
+from streamlit_ui import apply_page_style, home_button, page_header
+
+st.set_page_config(page_title="DL 성능", page_icon="🧠", layout="wide")
 
 REPORT_PATH = Path("artifacts/reports/dl_metrics.csv")
 METRIC_LABELS = {
@@ -24,11 +27,19 @@ def load_dl_report(path: str, modified_time: float) -> pd.DataFrame:
     return pd.read_csv(path)
 
 
-st.title("3. 딥러닝 성능표")
-st.caption("저장된 딥러닝 모델의 검증 성능과 학습 결과를 확인합니다.")
+apply_page_style()
+home_button()
+page_header(
+    "DEEP LEARNING",
+    "딥러닝 성능 🧠",
+    "저장된 MLP의 성능과 학습 기록을 편하게 확인해요.",
+)
 
 if not REPORT_PATH.exists():
-    st.warning("DL 성능 리포트가 없습니다: artifacts/reports/dl_metrics.csv")
+    st.info(
+        "아직 `artifacts/reports/dl_metrics.csv`가 없어요. "
+        "MLP 학습이 끝난 뒤 성능 리포트를 저장하면 이 화면에 자동으로 나타납니다."
+    )
     st.stop()
 
 report = load_dl_report(str(REPORT_PATH), REPORT_PATH.stat().st_mtime)
@@ -86,7 +97,4 @@ if {"tn", "fp", "fn", "tp"}.issubset(report.columns):
     )
     st.dataframe(confusion, width="stretch")
 
-st.warning(
-    "현재 train_processed.csv에서는 Attrition 1이 Stayed(재직)를 뜻합니다. "
-    "퇴사를 양성 클래스로 해석하려면 DL 재학습 전에 타깃 라벨을 통일해야 합니다."
-)
+st.info("이 프로젝트의 공통 타깃은 퇴사(Left)=1, 재직(Stayed)=0이에요.")
