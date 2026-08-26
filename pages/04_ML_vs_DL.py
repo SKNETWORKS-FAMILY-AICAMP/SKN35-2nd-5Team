@@ -5,7 +5,7 @@ import streamlit as st
 
 from streamlit_ui import apply_page_style, home_button, page_header
 
-st.set_page_config(page_title="ML vs DL", page_icon="⚖️", layout="wide")
+st.set_page_config(page_title="머신러닝과 딥러닝 비교", page_icon="⚖️", layout="wide")
 
 ML_REPORT_PATH = Path("artifacts/reports/ml_leaderboard.csv")
 DL_REPORT_PATH = Path("artifacts/reports/dl_metrics.csv")
@@ -20,9 +20,9 @@ METRICS = {
     "accuracy": "정확도",
     "precision": "정밀도",
     "recall": "재현율",
-    "f1": "F1",
-    "roc_auc": "ROC-AUC",
-    "average_precision": "PR-AUC",
+    "f1": "F1 점수",
+    "roc_auc": "ROC 곡선 면적",
+    "average_precision": "정밀도-재현율 곡선 면적",
 }
 
 
@@ -35,8 +35,8 @@ def load_report(path: str, modified_time: float) -> pd.DataFrame:
 apply_page_style()
 home_button()
 page_header(
-    "FINAL MATCH",
-    "최고 ML vs 딥러닝 ⚖️",
+    "최종 모델 비교",
+    "최고 머신러닝과 딥러닝 비교 ⚖️",
     "각 계열의 가장 좋은 모델을 같은 평가 지표로 나란히 놓고 살펴봐요.",
 )
 
@@ -52,7 +52,7 @@ dl_report = load_report(str(DL_REPORT_PATH), DL_REPORT_PATH.stat().st_mtime)
 
 required = {"model", *METRICS}
 if not required.issubset(ml_report.columns) or not required.issubset(dl_report.columns):
-    st.error("ML 또는 DL 리포트에 비교 지표가 부족합니다.")
+    st.error("머신러닝 또는 딥러닝 보고서에 비교 지표가 부족합니다.")
     st.stop()
 
 best_ml = ml_report.sort_values(["roc_auc", "f1"], ascending=False).iloc[0]
@@ -61,16 +61,16 @@ ml_name = MODEL_LABELS.get(str(best_ml["model"]), str(best_ml["model"]))
 dl_name = MODEL_LABELS.get(str(best_dl["model"]), str(best_dl["model"]).upper())
 
 summary = st.columns(3)
-summary[0].metric("ML 1위", ml_name, f"ROC-AUC {best_ml['roc_auc']:.4f}")
-summary[1].metric("딥러닝", dl_name, f"ROC-AUC {best_dl['roc_auc']:.4f}")
+summary[0].metric("머신러닝 1위", ml_name, f"ROC 곡선 면적 {best_ml['roc_auc']:.4f}")
+summary[1].metric("딥러닝", dl_name, f"ROC 곡선 면적 {best_dl['roc_auc']:.4f}")
 roc_delta = float(best_ml["roc_auc"] - best_dl["roc_auc"])
 winner = ml_name if roc_delta >= 0 else dl_name
-summary[2].metric("ROC-AUC 우세 모델", winner, f"차이 {abs(roc_delta):.4f}")
+summary[2].metric("ROC 곡선 면적 우세 모델", winner, f"차이 {abs(roc_delta):.4f}")
 
 comparison = pd.DataFrame(
     [
         {
-            "구분": "최고 ML",
+            "구분": "최고 머신러닝",
             "모델": ml_name,
             **{label: best_ml[key] for key, label in METRICS.items()},
         },
@@ -85,7 +85,7 @@ comparison = pd.DataFrame(
 st.subheader("최종 성능 비교표")
 st.dataframe(
     comparison.style.format({label: "{:.4f}" for label in METRICS.values()}).highlight_max(
-        subset=list(METRICS.values()), color="#dff3ea"
+        subset=list(METRICS.values()), color="#f4dfe5"
     ),
     width="stretch",
     hide_index=True,
@@ -99,16 +99,16 @@ delta_table = pd.DataFrame(
         "지표": list(METRICS.values()),
         ml_name: [best_ml[key] for key in METRICS],
         dl_name: [best_dl[key] for key in METRICS],
-        "ML - DL": [best_ml[key] - best_dl[key] for key in METRICS],
+        "머신러닝 - 딥러닝": [best_ml[key] - best_dl[key] for key in METRICS],
     }
 )
 with st.expander("지표별 차이 보기"):
     st.dataframe(
         delta_table.style.format(
-            {ml_name: "{:.4f}", dl_name: "{:.4f}", "ML - DL": "{:+.4f}"}
+            {ml_name: "{:.4f}", dl_name: "{:.4f}", "머신러닝 - 딥러닝": "{:+.4f}"}
         ),
         width="stretch",
         hide_index=True,
     )
 
-st.info("두 모델 모두 퇴사(Left)=1을 양성 클래스로 평가한 리포트일 때 가장 정확한 비교가 됩니다.")
+st.info("두 모델 모두 퇴사=1을 양성 클래스로 평가한 보고서일 때 가장 정확한 비교가 됩니다.")
