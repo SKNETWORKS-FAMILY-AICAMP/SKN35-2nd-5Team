@@ -1,16 +1,22 @@
 """공통 학습 구조를 사용하는 XGBoost 하이퍼파라미터 튜닝 모듈."""
 
+import json
+
+import joblib
 import pandas as pd
 from sklearn.model_selection import GridSearchCV, StratifiedKFold
 from sklearn.pipeline import Pipeline
 from xgboost import XGBClassifier
 
 from .train import (
+    MODELS_DIR,
+    REPORTS_DIR,
     create_common_preprocessor,
     create_training_pipeline,
     load_train_test_data,
     make_train_validation_split,
 )
+from .promotion import promote_tuned_model
 from .utils import RANDOM_STATE, evaluate_model
 
 # 모든 튜닝 단계에서 동일한 교차검증 조건을 사용한다.
@@ -20,6 +26,9 @@ TUNING_N_ESTIMATORS = 300
 FINAL_LEARNING_RATE = 0.05
 FINAL_N_ESTIMATORS = 2000
 EARLY_STOPPING_ROUNDS = 50
+TUNED_MODEL_PATH = MODELS_DIR / "xgboost_tuned.joblib"
+TUNED_METRICS_PATH = REPORTS_DIR / "xgboost_tuned_metrics.csv"
+TUNED_PARAMS_PATH = REPORTS_DIR / "xgboost_tuned_params.json"
 
 # 1단계에서 트리의 복잡도를 결정하는 후보값을 탐색한다.
 TREE_PARAM_GRID = {
@@ -218,7 +227,7 @@ def train_final_model(
 def run_tuning(
     tree_param_grid: dict | None = None,
     sampling_param_grid: dict | None = None,
-) -> tuple[Pipeline, dict, dict, int]:
+) -> tuple[Pipeline, dict, dict, dict, int]:
     """공통 데이터 구조로 전체 XGBoost 튜닝과 최종 평가를 실행한다."""
 
     X, y, X_test, y_test = load_train_test_data()
@@ -271,6 +280,14 @@ def run_tuning(
         best_params,
     )
 
+    validation_model = train_final_model(
+        X_train,
+        y_train,
+        best_params,
+        best_iteration,
+    )
+    validation_metrics = evaluate_model(validation_model, X_valid, y_valid)
+
     # 모델 선정과 트리 수 결정이 끝났으므로 train_processed.csv 전체로 재학습한다.
     final_model = train_final_model(
         X,
@@ -281,13 +298,37 @@ def run_tuning(
 
     # test_processed.csv는 튜닝에 사용하지 않고 여기서 마지막으로 한 번만 평가한다.
     metrics = evaluate_model(final_model, X_test, y_test)
-    return final_model, metrics, best_params, best_iteration
+    return final_model, validation_metrics, metrics, best_params, best_iteration
 
 
 def main() -> None:
     """터미널에서 전체 XGBoost 튜닝을 실행한다."""
 
-    _, metrics, best_params, best_iteration = run_tuning()
+    model, validation_metrics, metrics, best_params, best_iteration = run_tuning()
+
+    MODELS_DIR.mkdir(parents=True, exist_ok=True)
+    REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+    joblib.dump(model, TUNED_MODEL_PATH)
+    pd.DataFrame([{"model": "xgboost_tuned", **metrics}]).to_csv(
+        TUNED_METRICS_PATH,
+        index=False,
+    )
+    saved_params = {
+        **best_params,
+        "n_estimators": best_iteration,
+        "learning_rate": FINAL_LEARNING_RATE,
+    }
+    TUNED_PARAMS_PATH.write_text(
+        json.dumps(saved_params, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    _, promotion_message = promote_tuned_model(
+        "xgboost",
+        model,
+        validation_metrics,
+        metrics,
+        TUNED_MODEL_PATH,
+    )
 
     print()
     print("=" * 70)
@@ -308,6 +349,10 @@ def main() -> None:
     print(f"선정 파라미터      : {best_params}")
     print(f"최종 n_estimators : {best_iteration}")
     print(f"최종 learning_rate: {FINAL_LEARNING_RATE}")
+    print(f"튜닝 모델 저장     : {TUNED_MODEL_PATH}")
+    print(f"튜닝 성능 저장     : {TUNED_METRICS_PATH}")
+    print(f"튜닝 파라미터 저장 : {TUNED_PARAMS_PATH}")
+    print(f"자동 승격 결과     : {promotion_message}")
     print("=" * 70)
 
 
