@@ -6,7 +6,7 @@ import streamlit as st
 
 from streamlit_ui import apply_page_style, home_button, page_header
 
-st.set_page_config(page_title="ML 모델 비교", page_icon="🌳", layout="wide")
+st.set_page_config(page_title="머신러닝 모델 비교", page_icon="🌳", layout="wide")
 
 REPORT_PATH = Path("artifacts/reports/ml_leaderboard.csv")
 MODEL_ORDER = ["logistic_regression", "random_forest", "xgboost", "lightgbm"]
@@ -20,10 +20,9 @@ METRIC_LABELS = {
     "accuracy": "정확도",
     "precision": "정밀도",
     "recall": "재현율",
-    "f1": "F1",
-    "roc_auc": "ROC-AUC",
-    "average_precision": "PR-AUC",
-    "train_seconds": "학습 시간(초)",
+    "f1": "F1 점수",
+    "roc_auc": "ROC 곡선 면적",
+    "average_precision": "정밀도-재현율 곡선 면적",
 }
 
 
@@ -36,63 +35,64 @@ def load_ml_report(path: str, modified_time: float) -> pd.DataFrame:
 apply_page_style()
 home_button()
 page_header(
-    "MODEL GARDEN",
+    "모델 성능 비교",
     "머신러닝 모델 비교 🌳",
-    "같은 validation 데이터에서 기본 모델과 승격된 튜닝 모델을 공정하게 비교해요.",
+    "같은 검증 데이터에서 기본 모델과 승격된 튜닝 모델을 공정하게 비교해요.",
 )
 
 if not REPORT_PATH.exists():
-    st.warning("ML 성능 리포트가 없습니다: artifacts/reports/ml_leaderboard.csv")
+    st.warning("머신러닝 성능 보고서가 없습니다: artifacts/reports/ml_leaderboard.csv")
     st.stop()
 
 leaderboard = load_ml_report(str(REPORT_PATH), REPORT_PATH.stat().st_mtime)
 required_columns = {"model", *METRIC_LABELS}
 missing_columns = required_columns.difference(leaderboard.columns)
 if missing_columns:
-    st.error(f"ML 리포트에 필요한 컬럼이 없습니다: {', '.join(sorted(missing_columns))}")
+    st.error(f"머신러닝 보고서에 필요한 항목이 없습니다: {', '.join(sorted(missing_columns))}")
     st.stop()
 
 leaderboard = leaderboard[leaderboard["model"].isin(MODEL_ORDER)].copy()
 if leaderboard.empty:
-    st.warning("비교할 ML 모델 결과가 없습니다.")
+    st.warning("비교할 머신러닝 모델 결과가 없습니다.")
     st.stop()
 
 leaderboard["모델"] = leaderboard["model"].map(MODEL_LABELS)
 leaderboard["버전"] = leaderboard["artifact_path"].fillna("").apply(
-    lambda path: "Optuna 튜닝" if "_tuned.joblib" in str(path) else "기본"
+    lambda path: "옵튜나 튜닝" if "_tuned.joblib" in str(path) else "기본"
 )
 leaderboard = leaderboard.sort_values(
     ["roc_auc", "f1"], ascending=False, ignore_index=True
 )
 
 best = leaderboard.iloc[0]
-summary = st.columns(4)
+summary = st.columns(3)
 summary[0].metric("최고 모델", best["모델"])
-summary[1].metric("최고 ROC-AUC", f"{best['roc_auc']:.4f}")
-summary[2].metric("F1", f"{best['f1']:.4f}")
-train_time = best["train_seconds"]
-summary[3].metric(
-    "학습 시간",
-    "기록 없음" if pd.isna(train_time) else f"{train_time:.2f}초",
-)
+summary[1].metric("최고 ROC 곡선 면적", f"{best['roc_auc']:.4f}")
+summary[2].metric("F1 점수", f"{best['f1']:.4f}")
 
 display = leaderboard[["모델", "버전", *METRIC_LABELS]].rename(columns=METRIC_LABELS)
-metric_columns = ["정확도", "정밀도", "재현율", "F1", "ROC-AUC", "PR-AUC"]
+metric_columns = [
+    "정확도",
+    "정밀도",
+    "재현율",
+    "F1 점수",
+    "ROC 곡선 면적",
+    "정밀도-재현율 곡선 면적",
+]
 
 st.subheader("한눈에 보는 성능")
 st.dataframe(
-    display.style.format(
-        {column: "{:.4f}" for column in metric_columns}
-        | {"학습 시간(초)": "{:.2f}"}
-    ).highlight_max(subset=metric_columns, color="#dff3ea"),
+    display.style.format({column: "{:.4f}" for column in metric_columns}).highlight_max(
+        subset=metric_columns, color="#f4dfe5"
+    ),
     width="stretch",
     hide_index=True,
 )
 
 st.subheader("핵심 지표 비교")
-chart_metrics = ["정확도", "F1", "ROC-AUC", "PR-AUC"]
+chart_metrics = ["정확도", "F1 점수", "ROC 곡선 면적", "정밀도-재현율 곡선 면적"]
 chart = go.Figure()
-colors = ["#4F9F83", "#F29D72", "#7C8FD3", "#D18AB3"]
+colors = ["#A85F72", "#748BAD", "#C58B9B", "#8C7E9F"]
 
 for (_, row), color in zip(display.iterrows(), colors, strict=False):
     model_label = f"{row['모델']} · {row['버전']}"
@@ -139,7 +139,7 @@ chart.update_layout(
         "title": "평가 점수",
         "range": [y_min, y_max],
         "tickformat": ".2f",
-        "gridcolor": "#DCE9E3",
+        "gridcolor": "#E8DFE5",
         "zeroline": False,
     },
 )
