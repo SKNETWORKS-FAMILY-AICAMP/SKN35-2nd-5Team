@@ -14,3 +14,7 @@ def load_raw_test():
 
 def load_processed_train():
     return pd.read_csv(PROCESSED_DIR / "train_processed.csv")
+
+
+def load_processed_test():
+    return pd.read_csv(PROCESSED_DIR / "test_processed.csv")
