@@ -12,3 +12,19 @@ MODEL_NAMES = (
     "xgboost",
     "lightgbm",
 )
+
+ML_RESULT_COLUMNS = [
+    "model",
+    "accuracy",
+    "precision",
+    "recall",
+    "f1",
+    "roc_auc",
+    "average_precision",
+    "tn",
+    "fp",
+    "fn",
+    "tp",
+    "train_seconds",
+    "artifact_path",
+]

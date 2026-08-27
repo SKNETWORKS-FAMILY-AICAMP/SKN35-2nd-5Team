@@ -9,4 +9,4 @@ from sklearn.linear_model import LogisticRegression  # noqa: F401
 from sklearn.pipeline import Pipeline  # noqa: F401
 from sklearn.preprocessing import StandardScaler  # noqa: F401
 
-from .utils import RANDOM_STATE  # noqa: F401
+from src.utils.constants import RANDOM_STATE  # noqa: F401

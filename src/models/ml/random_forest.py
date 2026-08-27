@@ -6,4 +6,4 @@
 
 from sklearn.ensemble import RandomForestClassifier  # noqa: F401
 
-from .utils import RANDOM_STATE  # noqa: F401
+from src.utils.constants import RANDOM_STATE  # noqa: F401
