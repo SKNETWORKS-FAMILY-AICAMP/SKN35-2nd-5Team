@@ -27,9 +27,18 @@
 │   ├── dl/                           # 딥러닝 모델 결과물
 │   │   ├── mlp_best_params.pkl       # MLP 최적 하이퍼파라미터
 │   │   ├── mlp_model.pt              # 학습된 MLP 모델
-│   │   └── mlp_scaler.pkl            # MLP 전처리에 사용한 Scaler
+│   │   ├── mlp_scaler.pkl            # MLP 전처리에 사용한 Scaler
+│   │   ├── mlp_threshold.pkl         # MLP 최적 분류 임계값
+│   │   └── mlp_metadata.pkl          # MLP 입력 피처 및 설정 메타데이터
 │   │
-│   └── ml/                           # 머신러닝 모델 결과물
+│   ├── ml/                           # 머신러닝 모델 결과물
+│   │   ├── best_ml_model.joblib      # 최종 선정 ML 모델
+│   │   └── {model}.joblib            # 모델별 학습 결과
+│   │
+│   └── reports/                      # ML/DL 공통 성능 리포트
+│       ├── ml_leaderboard.csv        # ML 모델별 검증 성능
+│       ├── best_ml_test_metrics.csv  # 최고 ML 모델 테스트 성능
+│       └── dl_metrics.csv            # DL 모델 테스트 성능
 │
 ├── data/                             # 프로젝트 데이터
 │   ├── preprocessing/                # 전처리된 데이터
@@ -63,13 +72,12 @@
 │   ├── models/                       # 머신러닝 / 딥러닝 모델 관련 코드
 │   │   ├── dl/                       # 딥러닝
 │   │   │   ├── mlp_model.py          # MLP 모델 구조 정의
-│   │   │   └── train.py              # 딥러닝 모델 학습 및 저장
+│   │   │   └── train.py              # 딥러닝 모델 학습 흐름
 │   │   │   └── predict.py            # 딥러닝 모델 예측
 │   │   │
 │   │   └── ml/                       # 머신러닝 공통 학습 및 모델별 구현
 │   │       ├── __init__.py           # ML 패키지 초기화
-│   │       ├── train.py              # 공통 데이터 분할, 학습, 평가, 비교, 저장
-│   │       ├── utils.py              # ML 공통 상수와 평가 함수
+│   │       ├── train.py              # ML 학습, 비교, 최고 모델 재학습 흐름
 │   │       ├── logistic_regression.py # Logistic Regression 모델 정의
 │   │       ├── random_forest.py      # Random Forest 모델 정의
 │   │       ├── xgboost.py            # XGBoost 모델 정의
@@ -86,8 +94,11 @@
 │   └── utils/                        # 여러 곳에서 공통으로 사용하는 기능
 │       ├── __init__.py               # Python 패키지 초기화
 │       ├── constants.py              # 공통 상수 및 설정값
-│       ├── metrics.py                # 모델 평가 지표 관련 함수
-│       └── paths.py                  # 프로젝트 파일 경로 관리
+│       ├── metrics.py                # ML/DL 공통 평가 지표
+│       ├── paths.py                  # 프로젝트 파일 경로 관리
+│       ├── artifact_io.py            # ML/DL 모델 및 CSV 저장
+│       ├── ml_training.py            # ML 분할·전처리·모델 로딩 보조 함수
+│       └── model_promotion.py        # 튜닝 모델 리더보드 승격
 │
 └── uv.lock                           # uv를 통한 패키지 버전 및 의존성 고정
 ```

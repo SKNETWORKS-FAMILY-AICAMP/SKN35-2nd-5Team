@@ -8,8 +8,8 @@
 from sklearn.linear_model import LogisticRegression  
 from sklearn.pipeline import Pipeline  
 from sklearn.preprocessing import StandardScaler  
+from src.utils.constants import RANDOM_STATE 
 
-from .utils import RANDOM_STATE  
 
 def create_logistic_regression() -> Pipeline:
     """StandardScaler와 LogisticRegression을 결합한 Pipeline 객체를 생성
@@ -30,3 +30,4 @@ def create_logistic_regression() -> Pipeline:
         ]
     )
     return model
+

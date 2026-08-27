@@ -1,9 +1,7 @@
 import random
 import time
 from copy import deepcopy
-from pathlib import Path
 
-import joblib
 import numpy as np
 import optuna
 import torch
@@ -22,8 +20,10 @@ from torch.utils.data import DataLoader, TensorDataset
 
 from src.data.loader import load_processed_test, load_processed_train
 from src.models.dl.mlp_model import MLPClassifier
+from src.utils.artifact_io import save_dl_artifacts
 from src.utils.constants import RANDOM_STATE, VAL_SIZE
-from src.utils.metrics import evaluate_model
+from src.utils.metrics import print_binary_metrics
+from src.utils.paths import DL_ARTIFACTS_DIR, DL_METRICS_PATH
 
 # Optuna 로깅 레벨 설정 (경고만 출력)
 optuna.logging.set_verbosity(optuna.logging.WARNING)
@@ -471,7 +471,8 @@ def find_best_threshold(
     y_true, y_proba, min_recall=0.80, min_threshold=0.1, max_threshold=0.9, step=0.01
 ):
     """
-    최소 재현율(Recall >= min_recall) 제약 하에서 정밀도(Precision)와 Precision을 극대화하는 최적 임계값을 탐색합니다.
+    최소 재현율(Recall >= min_recall) 제약 하에서
+    정밀도(Precision)를 극대화하는 최적 임계값을 탐색합니다.
     """
     results = []
     best_threshold = None
@@ -594,29 +595,27 @@ def main():
     print("\n" + "=" * 50)
     print("Final Test Evaluation")
     print("=" * 50)
-    evaluate_model(test_true, test_pred, test_proba)
+    test_metrics = {"model": "mlp", **print_binary_metrics(test_true, test_pred, test_proba)}
 
-    # 6. 아티팩트 저장 (안전한 폴더 생성 및 메타데이터 포함)
-    artifacts_dir = Path("artifacts/dl")
-    artifacts_dir.mkdir(parents=True, exist_ok=True)
-
-    # 모델 가중치는 CPU로 이동하여 어디서든 로드 가능하도록 저장
-    model_cpu = deepcopy(model).to("cpu")
-    torch.save(model_cpu.state_dict(), artifacts_dir / "mlp_model.pt")
-    joblib.dump(preprocessor, artifacts_dir / "mlp_scaler.pkl")
-    joblib.dump(best_params, artifacts_dir / "mlp_best_params.pkl")
-    joblib.dump(best_threshold, artifacts_dir / "mlp_threshold.pkl")
-
+    # 6. 모델 구성요소와 공통 스키마의 DL 성능 CSV 저장
     metadata = {
         "in_features": in_features,
         "feature_names": feature_names,
         "best_threshold": best_threshold,
         "best_params": best_params,
     }
-    joblib.dump(metadata, artifacts_dir / "mlp_metadata.pkl")
+    save_dl_artifacts(
+        model,
+        preprocessor,
+        best_params,
+        best_threshold,
+        metadata,
+        test_metrics,
+    )
 
     print("\n모델 학습 및 저장 완료")
-    print(f"저장 경로      : {artifacts_dir.resolve()}")
+    print(f"저장 경로      : {DL_ARTIFACTS_DIR}")
+    print(f"성능 리포트    : {DL_METRICS_PATH}")
     print(f"저장된 Threshold: {best_threshold:.2f}")
 
 
