@@ -7,3 +7,19 @@
 from sklearn.ensemble import RandomForestClassifier  # noqa: F401
 
 from .utils import RANDOM_STATE  # noqa: F401
+
+
+def create_random_forest():
+    """Random Forest 모델 객체를 생성하여 반환합니다.
+
+    Returns:
+        RandomForestClassifier: 클래스 불균형 및 기본 하이퍼파라미터가 설정된 모델 객체
+    """
+    model = RandomForestClassifier(
+        n_estimators=100,
+        max_depth=10,
+        class_weight="balanced",
+        random_state=RANDOM_STATE,
+        n_jobs=-1,
+    )
+    return model
