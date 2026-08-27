@@ -9,16 +9,27 @@ from optuna.trial import Trial
 from sklearn.model_selection import StratifiedKFold, cross_val_score
 from sklearn.pipeline import Pipeline
 
+<<<<<<< HEAD
 from src.data.loader import load_processed_train_test_features
 from src.utils.artifact_io import save_tuned_ml_artifacts
 from src.utils.constants import RANDOM_STATE
 from src.utils.metrics import evaluate_sklearn_model
 from src.utils.ml_training import (
+=======
+from .promotion import promote_tuned_model
+from .train import (
+    MODELS_DIR,
+    REPORTS_DIR,
+>>>>>>> feat/chan
     create_training_pipeline,
     make_train_validation_split,
 )
+<<<<<<< HEAD
 from src.utils.model_promotion import promote_tuned_model
 from src.utils.paths import ML_ARTIFACTS_DIR, REPORTS_DIR
+=======
+from .utils import RANDOM_STATE, evaluate_model
+>>>>>>> feat/chan
 
 CV_FOLDS = 5
 DEFAULT_TRIALS = 50
@@ -155,8 +166,7 @@ def main() -> None:
     print(f"ROC-AUC           : {metrics['roc_auc']:.4f}")
     print(f"Average Precision : {metrics['average_precision']:.4f}")
     print(
-        f"TN={metrics['tn']:,} | FP={metrics['fp']:,} | "
-        f"FN={metrics['fn']:,} | TP={metrics['tp']:,}"
+        f"TN={metrics['tn']:,} | FP={metrics['fp']:,} | FN={metrics['fn']:,} | TP={metrics['tp']:,}"
     )
     print(f"Saved model       : {TUNED_MODEL_PATH}")
     print(f"Saved metrics     : {TUNED_METRICS_PATH}")
