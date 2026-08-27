@@ -1,0 +1,8 @@
+{
+  "max_depth": 3,
+  "max_leaves": 0,
+  "colsample_bytree": 0.9,
+  "subsample": 0.7,
+  "n_estimators": 340,
+  "learning_rate": 0.05
+}
