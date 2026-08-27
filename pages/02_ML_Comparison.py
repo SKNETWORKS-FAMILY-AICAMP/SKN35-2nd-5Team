@@ -6,7 +6,7 @@ import streamlit as st
 
 from streamlit_ui import apply_page_style, home_button, page_header
 
-st.set_page_config(page_title="머신러닝 모델 비교", page_icon="🌳", layout="wide")
+st.set_page_config(page_title="머신러닝 모델 비교", layout="wide")
 
 REPORT_PATH = Path("artifacts/reports/ml_leaderboard.csv")
 MODEL_ORDER = ["logistic_regression", "random_forest", "xgboost", "lightgbm"]
@@ -36,7 +36,7 @@ apply_page_style()
 home_button()
 page_header(
     "모델 성능 비교",
-    "머신러닝 모델 비교 🌳",
+    "머신러닝 모델 비교",
     "같은 검증 데이터에서 기본 모델과 승격된 튜닝 모델을 공정하게 비교해요.",
 )
 
@@ -57,18 +57,19 @@ if leaderboard.empty:
     st.stop()
 
 leaderboard["모델"] = leaderboard["model"].map(MODEL_LABELS)
-leaderboard["버전"] = leaderboard["artifact_path"].fillna("").apply(
-    lambda path: "옵튜나 튜닝" if "_tuned.joblib" in str(path) else "기본"
+leaderboard["버전"] = (
+    leaderboard["artifact_path"]
+    .fillna("")
+    .apply(lambda path: "옵튜나 튜닝" if "_tuned.joblib" in str(path) else "기본")
 )
-leaderboard = leaderboard.sort_values(
-    ["roc_auc", "f1"], ascending=False, ignore_index=True
-)
+leaderboard = leaderboard.sort_values(["roc_auc", "f1"], ascending=False, ignore_index=True)
 
 best = leaderboard.iloc[0]
-summary = st.columns(3)
-summary[0].metric("최고 모델", best["모델"])
-summary[1].metric("최고 ROC 곡선 면적", f"{best['roc_auc']:.4f}")
-summary[2].metric("F1 점수", f"{best['f1']:.4f}")
+with st.container(key="stat-bar"):
+    summary = st.columns(3)
+    summary[0].metric("최고 모델", best["모델"])
+    summary[1].metric("최고 ROC 곡선 면적", f"{best['roc_auc']:.4f}")
+    summary[2].metric("F1 점수", f"{best['f1']:.4f}")
 
 display = leaderboard[["모델", "버전", *METRIC_LABELS]].rename(columns=METRIC_LABELS)
 metric_columns = [
@@ -83,7 +84,7 @@ metric_columns = [
 st.subheader("한눈에 보는 성능")
 st.dataframe(
     display.style.format({column: "{:.4f}" for column in metric_columns}).highlight_max(
-        subset=metric_columns, color="#f4dfe5"
+        subset=metric_columns, color="#E8F3FF"
     ),
     width="stretch",
     hide_index=True,
@@ -92,7 +93,7 @@ st.dataframe(
 st.subheader("핵심 지표 비교")
 chart_metrics = ["정확도", "F1 점수", "ROC 곡선 면적", "정밀도-재현율 곡선 면적"]
 chart = go.Figure()
-colors = ["#A85F72", "#748BAD", "#C58B9B", "#8C7E9F"]
+colors = ["#3182F6", "#1B64DA", "#00C2FF", "#4E5968"]
 
 for (_, row), color in zip(display.iterrows(), colors, strict=False):
     model_label = f"{row['모델']} · {row['버전']}"
@@ -111,10 +112,7 @@ for (_, row), color in zip(display.iterrows(), colors, strict=False):
                 "line": {"color": color, "width": 3},
                 "size": 11,
             },
-            hovertemplate=(
-                f"<b>{model_label}</b><br>"
-                "%{x}: %{y:.4f}<extra></extra>"
-            ),
+            hovertemplate=(f"<b>{model_label}</b><br>%{{x}}: %{{y:.4f}}<extra></extra>"),
         )
     )
 
@@ -125,7 +123,7 @@ chart.update_layout(
     height=480,
     margin={"l": 20, "r": 20, "t": 35, "b": 20},
     paper_bgcolor="rgba(0,0,0,0)",
-    plot_bgcolor="rgba(255,255,255,0.72)",
+    plot_bgcolor="rgba(255,255,255,0.9)",
     hovermode="x unified",
     legend={
         "orientation": "h",
@@ -139,7 +137,7 @@ chart.update_layout(
         "title": "평가 점수",
         "range": [y_min, y_max],
         "tickformat": ".2f",
-        "gridcolor": "#E8DFE5",
+        "gridcolor": "#E5E8EB",
         "zeroline": False,
     },
 )

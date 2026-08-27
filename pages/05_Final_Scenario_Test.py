@@ -11,7 +11,7 @@ from src.data.preprocess import preprocess_pipeline
 from streamlit_ui import apply_page_style, home_button, page_header
 from wheel_picker import wheel_picker_component
 
-st.set_page_config(page_title="퇴사 위험 시나리오", page_icon="✨", layout="wide")
+st.set_page_config(page_title="퇴사 위험 시나리오", layout="wide")
 
 MODEL_PATH = Path("artifacts/ml/best_ml_model.joblib")
 ACTIONABLE_FEATURES = [
@@ -96,12 +96,8 @@ def prepare_model_input(
     if set(feature_names).issubset(processed.columns):
         return processed.reindex(columns=feature_names)
 
-    processed_reference = processed_train.drop(
-        columns=["Attrition", "Unnamed: 0"], errors="ignore"
-    )
-    categorical_columns = processed_reference.select_dtypes(
-        exclude="number"
-    ).columns.tolist()
+    processed_reference = processed_train.drop(columns=["Attrition", "Unnamed: 0"], errors="ignore")
+    categorical_columns = processed_reference.select_dtypes(exclude="number").columns.tolist()
     for column in categorical_columns:
         categories = sorted(processed_reference[column].dropna().unique().tolist())
         processed[column] = pd.Categorical(processed[column], categories=categories)
@@ -116,21 +112,14 @@ def prepare_model_input(
         if feature in encoded.columns:
             continue
         source_column = next(
-            (
-                column
-                for column in raw_columns
-                if feature.startswith(f"{column}_")
-            ),
+            (column for column in raw_columns if feature.startswith(f"{column}_")),
             None,
         )
         if source_column is None:
             continue
         category = feature.removeprefix(f"{source_column}_")
         normalized = (
-            raw_frame[source_column]
-            .astype("string")
-            .str.strip()
-            .str.replace("'", "’", regex=False)
+            raw_frame[source_column].astype("string").str.strip().str.replace("'", "’", regex=False)
         )
         encoded[feature] = normalized.eq(category).astype(int).to_numpy()
 
@@ -180,7 +169,7 @@ apply_page_style()
 home_button()
 page_header(
     "조건 변화 모의실험",
-    "퇴사 위험 시나리오 ✨",
+    "퇴사 위험 시나리오",
     "직원의 업무 조건을 조금씩 조정해 모델이 예상하는 퇴사 확률 변화를 살펴봐요.",
 )
 
@@ -289,15 +278,16 @@ if submitted:
     after_label = "고위험" if after_probability >= threshold else "저위험"
 
     st.subheader("비교 결과")
-    result_metrics = st.columns(3)
-    result_metrics[0].metric("조정 전", f"{before_probability:.1%}", before_label)
-    result_metrics[1].metric(
-        "조정 후",
-        f"{after_probability:.1%}",
-        delta=f"{probability_delta:+.1%}",
-        delta_color="inverse",
-    )
-    result_metrics[2].metric("현재 판정", after_label)
+    with st.container(key="stat-bar"):
+        result_metrics = st.columns(3)
+        result_metrics[0].metric("조정 전", f"{before_probability:.1%}", before_label)
+        result_metrics[1].metric(
+            "조정 후",
+            f"{after_probability:.1%}",
+            delta=f"{probability_delta:+.1%}",
+            delta_color="inverse",
+        )
+        result_metrics[2].metric("현재 판정", after_label)
 
     result = pd.DataFrame(
         {
