@@ -41,9 +41,7 @@ def save_metrics_csv(metrics: MetricData, output_path: Path) -> Path:
     # 팀원마다 프로젝트 절대경로가 달라도 리포트가 깨지지 않도록
     # artifact_path에는 artifacts/부터 시작하는 프로젝트 상대경로만 저장한다.
     if "artifact_path" in report.columns:
-        report["artifact_path"] = report["artifact_path"].apply(
-            _normalize_artifact_reference
-        )
+        report["artifact_path"] = report["artifact_path"].apply(_normalize_artifact_reference)
     report.to_csv(output_path, index=False)
     return output_path
 

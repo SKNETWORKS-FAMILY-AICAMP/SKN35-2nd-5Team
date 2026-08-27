@@ -7,7 +7,7 @@ from streamlit_ui import apply_page_style, home_button, page_header
 
 st.set_page_config(page_title="딥러닝 성능", layout="wide")
 
-REPORT_PATH = Path("artifacts/reports/dl_metrics.csv")
+REPORT_PATH = Path("artifacts/reports/mlp_test_metrics.csv")
 METRIC_LABELS = {
     "accuracy": "정확도",
     "precision": "정밀도",
@@ -36,7 +36,7 @@ page_header(
 
 if not REPORT_PATH.exists():
     st.info(
-        "아직 `artifacts/reports/dl_metrics.csv`가 없어요. "
+        "아직 `artifacts/reports/mlp_test_metrics.csv`가 없어요. "
         "MLP 학습이 끝난 뒤 성능 리포트를 저장하면 이 화면에 자동으로 나타납니다."
     )
     st.stop()
