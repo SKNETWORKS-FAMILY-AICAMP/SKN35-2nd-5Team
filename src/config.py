@@ -12,4 +12,14 @@ ROOT_DIR = PROJECT_ROOT
 RAW_DIR = RAW_DATA_DIR
 PROCESSED_DIR = PROCESSED_DATA_DIR
 
+<<<<<<< HEAD
 __all__ = ["ARTIFACTS_DIR", "DATA_DIR", "PROCESSED_DIR", "RAW_DIR", "ROOT_DIR"]
+=======
+# project/data/raw 경로
+RAW_DIR = DATA_DIR / "raw"
+# project/data/preprocessing 경로
+PROCESSED_DIR = DATA_DIR / "preprocessing"
+
+# project/artifacts/dl
+DL_MODEL_DIR = ARTIFACTS_DIR / "dl"
+>>>>>>> feat/chan
