@@ -42,15 +42,20 @@
 
 ``uv run python -m src.models.ml.train``
 
-개발 중 특정 모델만 시험하고 기존 산출물을 덮어쓰지 않으려면 다음처럼 호출한다.
+특정 모델 하나만 학습하려면 ``--model`` 뒤에 등록된 모델 이름을 입력한다.
 
-``run_training(["xgboost"], save_artifacts=False)``
+``uv run python -m src.models.ml.train --model xgboost``
+
+기존 산출물을 덮어쓰지 않고 시험만 하려면 ``--no-save``를 함께 사용한다.
+
+``uv run python -m src.models.ml.train --model xgboost --no-save``
 
 공통 학습 조건을 바꿔야 할 때만 이 파일의 담당자와 협의하여 수정한다. 이렇게 역할을
 분리하면 여러 팀원이 각자 다른 모델 파일을 개발하고 병합해도 ``train.py``에서 충돌할
 가능성을 줄일 수 있다.
 """
 
+import argparse
 from time import perf_counter
 from typing import Any, Callable
 
@@ -62,6 +67,7 @@ from src.utils.artifact_io import save_ml_artifacts
 from src.utils.constants import ML_RESULT_COLUMNS
 from src.utils.metrics import evaluate_sklearn_model
 from src.utils.ml_training import (
+    MODEL_SPECS,
     create_training_pipeline,
     load_model_factories,
     make_train_validation_split,
@@ -73,6 +79,25 @@ from src.utils.paths import (
     ML_LEADERBOARD_PATH,
     project_relative_path,
 )
+
+
+def build_cli_parser() -> argparse.ArgumentParser:
+    """팀원이 전체 또는 단일 모델 학습 옵션을 선택할 CLI 파서를 생성한다."""
+
+    parser = argparse.ArgumentParser(
+        description="등록된 머신러닝 모델을 공통 조건으로 학습·평가합니다."
+    )
+    parser.add_argument(
+        "--model",
+        choices=tuple(MODEL_SPECS),
+        help="지정한 모델 하나만 학습합니다. 생략하면 구현된 모델 전체를 학습합니다.",
+    )
+    parser.add_argument(
+        "--no-save",
+        action="store_true",
+        help="학습과 평가는 수행하되 기존 모델 및 리포트 파일을 덮어쓰지 않습니다.",
+    )
+    return parser
 
 
 def train_candidates(
@@ -202,7 +227,17 @@ def run_training(
 def main() -> None:
     """터미널에서 공통 머신러닝 학습을 실행하는 진입점."""
 
-    leaderboard, final_metrics, unavailable = run_training()
+    parser = build_cli_parser()
+    args = parser.parse_args()
+    selected = [args.model] if args.model else None
+
+    try:
+        leaderboard, final_metrics, unavailable = run_training(
+            selected,
+            save_artifacts=not args.no_save,
+        )
+    except RuntimeError as exc:
+        parser.exit(status=1, message=f"학습 실패: {exc}\n")
 
     print("\n검증 데이터 기준 모델 순위")
     print("=" * 100)
@@ -222,9 +257,12 @@ def main() -> None:
         for model_name, reason in unavailable.items():
             print(f"- {model_name}: {reason}")
 
-    print(f"\n검증 결과표: {ML_LEADERBOARD_PATH}")
-    print(f"최고 모델: {BEST_ML_MODEL_PATH}")
-    print(f"최종 테스트 결과: {BEST_ML_TEST_METRICS_PATH}")
+    if args.no_save:
+        print("\n--no-save 옵션으로 실행하여 모델과 리포트를 저장하지 않았습니다.")
+    else:
+        print(f"\n검증 결과표: {ML_LEADERBOARD_PATH}")
+        print(f"최고 모델: {BEST_ML_MODEL_PATH}")
+        print(f"최종 테스트 결과: {BEST_ML_TEST_METRICS_PATH}")
 
 
 if __name__ == "__main__":
