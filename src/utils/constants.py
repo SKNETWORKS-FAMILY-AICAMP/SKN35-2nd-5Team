@@ -5,6 +5,7 @@ NEGATIVE_LABEL = "Stayed"
 RANDOM_STATE = 42
 TEST_SIZE = 0.2
 VAL_SIZE = 0.2
+IN_FEATURES = 28
 
 MODEL_NAMES = (
     "logistic_regression",

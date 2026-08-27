@@ -13,3 +13,6 @@ ARTIFACTS_DIR = ROOT_DIR / "artifacts"
 RAW_DIR = DATA_DIR / "raw"
 # project/data/preprocessing 경로
 PROCESSED_DIR = DATA_DIR / "preprocessing"
+
+# project/artifacts/dl
+DL_MODEL_DIR = ARTIFACTS_DIR / "dl"

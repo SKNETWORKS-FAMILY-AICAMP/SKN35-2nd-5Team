@@ -12,6 +12,7 @@ from optuna.trial import Trial
 from sklearn.model_selection import StratifiedKFold, cross_val_score
 from sklearn.pipeline import Pipeline
 
+from .promotion import promote_tuned_model
 from .train import (
     MODELS_DIR,
     REPORTS_DIR,
@@ -20,7 +21,6 @@ from .train import (
     make_train_validation_split,
 )
 from .utils import RANDOM_STATE, evaluate_model
-from .promotion import promote_tuned_model
 
 CV_FOLDS = 5
 DEFAULT_TRIALS = 50
@@ -159,8 +159,7 @@ def main() -> None:
     print(f"ROC-AUC           : {metrics['roc_auc']:.4f}")
     print(f"Average Precision : {metrics['average_precision']:.4f}")
     print(
-        f"TN={metrics['tn']:,} | FP={metrics['fp']:,} | "
-        f"FN={metrics['fn']:,} | TP={metrics['tp']:,}"
+        f"TN={metrics['tn']:,} | FP={metrics['fp']:,} | FN={metrics['fn']:,} | TP={metrics['tp']:,}"
     )
     print(f"Saved model       : {TUNED_MODEL_PATH}")
     print(f"Saved metrics     : {TUNED_METRICS_PATH}")
