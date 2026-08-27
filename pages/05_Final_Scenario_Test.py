@@ -6,14 +6,14 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
-from src.data.loader import load_raw_test, load_raw_train
+from src.data.loader import load_processed_train, load_raw_test, load_raw_train
 from src.data.preprocess import preprocess_pipeline
 from streamlit_ui import apply_page_style, home_button, page_header
 from wheel_picker import wheel_picker_component
 
 st.set_page_config(page_title="퇴사 위험 시나리오", page_icon="✨", layout="wide")
 
-MODEL_PATH = Path("artifacts/models/best_ml_model.joblib")
+MODEL_PATH = Path("artifacts/ml/best_ml_model.joblib")
 ACTIONABLE_FEATURES = [
     "Job Role",
     "Monthly Income",
@@ -68,8 +68,8 @@ VALUE_LABELS = {
 
 
 @st.cache_data
-def load_data() -> tuple[pd.DataFrame, pd.DataFrame]:
-    return load_raw_train(), load_raw_test()
+def load_data() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    return load_raw_train(), load_raw_test(), load_processed_train()
 
 
 @st.cache_resource
@@ -81,16 +81,63 @@ def load_model(path: str, modified_time: float):
 def prepare_model_input(
     raw_frame: pd.DataFrame,
     raw_train: pd.DataFrame,
+    processed_train: pd.DataFrame,
     feature_names: list[str],
 ) -> pd.DataFrame:
     """원본 입력을 학습 때와 같은 40개 전처리 피처로 변환한다."""
 
-    processed = preprocess_pipeline(raw_frame.copy(), reference=raw_train.copy())
+    typed_frame = raw_frame.copy()
+    for column in typed_frame.columns.intersection(raw_train.columns):
+        if pd.api.types.is_numeric_dtype(raw_train[column]):
+            typed_frame[column] = pd.to_numeric(typed_frame[column], errors="raise")
+
+    processed = preprocess_pipeline(typed_frame, reference=raw_train.copy())
     processed = processed.drop(columns=["Attrition", "Unnamed: 0"], errors="ignore")
-    missing = [feature for feature in feature_names if feature not in processed.columns]
+    if set(feature_names).issubset(processed.columns):
+        return processed.reindex(columns=feature_names)
+
+    processed_reference = processed_train.drop(
+        columns=["Attrition", "Unnamed: 0"], errors="ignore"
+    )
+    categorical_columns = processed_reference.select_dtypes(
+        exclude="number"
+    ).columns.tolist()
+    for column in categorical_columns:
+        categories = sorted(processed_reference[column].dropna().unique().tolist())
+        processed[column] = pd.Categorical(processed[column], categories=categories)
+    encoded = pd.get_dummies(
+        processed,
+        columns=categorical_columns,
+        drop_first=True,
+        dtype=int,
+    )
+    raw_columns = sorted(raw_frame.columns, key=len, reverse=True)
+    for feature in feature_names:
+        if feature in encoded.columns:
+            continue
+        source_column = next(
+            (
+                column
+                for column in raw_columns
+                if feature.startswith(f"{column}_")
+            ),
+            None,
+        )
+        if source_column is None:
+            continue
+        category = feature.removeprefix(f"{source_column}_")
+        normalized = (
+            raw_frame[source_column]
+            .astype("string")
+            .str.strip()
+            .str.replace("'", "’", regex=False)
+        )
+        encoded[feature] = normalized.eq(category).astype(int).to_numpy()
+
+    missing = [feature for feature in feature_names if feature not in encoded.columns]
     if missing:
-        raise ValueError("전처리 후 누락된 피처: " + ", ".join(missing))
-    return processed.reindex(columns=feature_names)
+        raise ValueError("전처리 후 누락된 입력 항목: " + ", ".join(missing))
+    return encoded.reindex(columns=feature_names)
 
 
 def attrition_probability(model, frame: pd.DataFrame) -> float:
@@ -143,7 +190,7 @@ if not MODEL_PATH.exists():
     st.stop()
 
 try:
-    train_data, test_data = load_data()
+    train_data, test_data, processed_train = load_data()
     model = load_model(str(MODEL_PATH), MODEL_PATH.stat().st_mtime)
 except Exception as exc:
     st.error(f"모델 또는 데이터를 불러오지 못했어요: {exc}")
@@ -222,11 +269,13 @@ if submitted:
         baseline_input = prepare_model_input(
             source_row.to_frame().T,
             train_data,
+            processed_train,
             feature_names,
         )
         adjusted_input = prepare_model_input(
             adjusted_row.to_frame().T,
             train_data,
+            processed_train,
             feature_names,
         )
         before_probability = attrition_probability(model, baseline_input)

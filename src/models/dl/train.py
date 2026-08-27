@@ -468,10 +468,10 @@ def get_predictions(model, data_loader):
 
 
 def find_best_threshold(
-    y_true, y_proba, min_recall=0.85, min_threshold=0.1, max_threshold=0.9, step=0.01
+    y_true, y_proba, min_recall=0.80, min_threshold=0.1, max_threshold=0.9, step=0.01
 ):
     """
-    최소 재현율(Recall >= min_recall) 제약 하에서 정밀도(Precision)와 F1을 극대화하는 최적 임계값을 탐색합니다.
+    최소 재현율(Recall >= min_recall) 제약 하에서 정밀도(Precision)와 Precision을 극대화하는 최적 임계값을 탐색합니다.
     """
     results = []
     best_threshold = None
@@ -554,7 +554,7 @@ def main():
     test_df = load_processed_test()
 
     # 1. 하이퍼파라미터 최적화
-    best_params = run_optuna_search(train_df, test_df, n_trials=50, epochs=40)
+    best_params = run_optuna_search(train_df, test_df, n_trials=150, epochs=40)
 
     # 2. 최적 배치 사이즈로 최종 DataLoader 구성
     batch_size = best_params.get("batch_size", 128)
@@ -585,7 +585,7 @@ def main():
 
     # 4. 검증셋 기준 임계값 최적화
     val_true, val_proba = get_predictions(model, val_loader)
-    best_threshold = find_best_threshold(val_true, val_proba, min_recall=0.85)
+    best_threshold = find_best_threshold(val_true, val_proba, min_recall=0.80)
 
     # 5. 독립 테스트셋 최종 평가
     test_true, test_proba = get_predictions(model, test_loader)
