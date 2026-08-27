@@ -71,6 +71,7 @@ from src.utils.paths import (
     BEST_ML_TEST_METRICS_PATH,
     ML_ARTIFACTS_DIR,
     ML_LEADERBOARD_PATH,
+    project_relative_path,
 )
 
 
@@ -103,7 +104,9 @@ def train_candidates(
             {
                 "model": model_name,
                 "train_seconds": elapsed,
-                "artifact_path": str(ML_ARTIFACTS_DIR / f"{model_name}.joblib"),
+                "artifact_path": project_relative_path(
+                    ML_ARTIFACTS_DIR / f"{model_name}.joblib"
+                ),
             }
         )
         results.append(metrics)

@@ -8,7 +8,7 @@ from sklearn.pipeline import Pipeline
 
 from src.utils.artifact_io import save_metrics_csv, save_promoted_ml_artifacts
 from src.utils.constants import ML_RESULT_COLUMNS
-from src.utils.paths import ML_LEADERBOARD_PATH
+from src.utils.paths import ML_LEADERBOARD_PATH, project_relative_path
 
 
 def _score(metrics: dict[str, Any] | pd.Series) -> tuple[float, float]:
@@ -36,7 +36,7 @@ def promote_tuned_model(
         "model": model_name,
         **validation_metrics,
         "train_seconds": float("nan"),
-        "artifact_path": str(artifact_path),
+        "artifact_path": project_relative_path(artifact_path),
     }
     leaderboard = leaderboard[leaderboard["model"] != model_name]
     leaderboard = pd.concat([leaderboard, pd.DataFrame([tuned_row])], ignore_index=True)

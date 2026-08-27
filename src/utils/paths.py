@@ -31,3 +31,9 @@ def ensure_artifact_dirs() -> None:
 
     for directory in (ML_ARTIFACTS_DIR, DL_ARTIFACTS_DIR, REPORTS_DIR):
         directory.mkdir(parents=True, exist_ok=True)
+
+
+def project_relative_path(path: Path) -> str:
+    """프로젝트 내부 경로를 OS와 무관한 상대경로 문자열로 변환한다."""
+
+    return path.relative_to(PROJECT_ROOT).as_posix()

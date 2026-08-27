@@ -32,13 +32,39 @@ def save_metrics_csv(metrics: MetricData, output_path: Path) -> Path:
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     if isinstance(metrics, pd.DataFrame):
-        report = metrics
+        report = metrics.copy()
     elif isinstance(metrics, Mapping):
         report = pd.DataFrame([metrics])
     else:
         report = pd.DataFrame(metrics)
+
+    # 팀원마다 프로젝트 절대경로가 달라도 리포트가 깨지지 않도록
+    # artifact_path에는 artifacts/부터 시작하는 프로젝트 상대경로만 저장한다.
+    if "artifact_path" in report.columns:
+        report["artifact_path"] = report["artifact_path"].apply(
+            _normalize_artifact_reference
+        )
     report.to_csv(output_path, index=False)
     return output_path
+
+
+def _normalize_artifact_reference(value: Any) -> Any:
+    """Windows/Unix 절대경로에서 프로젝트의 artifacts 이하 경로만 남긴다."""
+
+    if pd.isna(value) or not str(value).strip():
+        return value
+
+    normalized = str(value).replace("\\", "/")
+    marker = "artifacts/"
+    marker_index = normalized.lower().find(marker)
+    if marker_index >= 0:
+        artifact_reference = normalized[marker_index:]
+        legacy_ml_prefix = "artifacts/models/"
+        if artifact_reference.lower().startswith(legacy_ml_prefix):
+            filename = artifact_reference[len(legacy_ml_prefix) :]
+            return f"artifacts/ml/{filename}"
+        return artifact_reference
+    return normalized
 
 
 def save_ml_artifacts(
