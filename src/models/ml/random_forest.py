@@ -4,10 +4,8 @@
 이 파일에서는 아래 import를 사용해 ``create_random_forest()``만 구현하면 된다.
 """
 
-from sklearn.ensemble import RandomForestClassifier  # noqa: F401
-
-from .utils import RANDOM_STATE  # noqa: F401
-
+from sklearn.ensemble import RandomForestClassifier 
+from src.utils.constants import RANDOM_STATE 
 
 def create_random_forest():
     """Random Forest 모델 객체를 생성하여 반환합니다.
@@ -23,3 +21,4 @@ def create_random_forest():
         n_jobs=-1,
     )
     return model
+

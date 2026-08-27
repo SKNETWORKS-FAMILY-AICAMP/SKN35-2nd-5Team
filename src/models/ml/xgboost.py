@@ -2,7 +2,7 @@
 
 from xgboost import XGBClassifier
 
-from .utils import RANDOM_STATE
+from src.utils.constants import RANDOM_STATE
 
 
 def create_xgboost() -> XGBClassifier:

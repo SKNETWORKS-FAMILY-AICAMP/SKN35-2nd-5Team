@@ -2,11 +2,11 @@
 
 from lightgbm import LGBMClassifier
 
-from .utils import RANDOM_STATE
+from src.utils.constants import RANDOM_STATE
 
 
 def create_lightgbm() -> LGBMClassifier:
-   
+
     return LGBMClassifier(
         boosting_type="gbdt",
         objective="binary",

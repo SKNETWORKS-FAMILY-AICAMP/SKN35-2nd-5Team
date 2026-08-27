@@ -1,15 +1,15 @@
-# csv 파일 또는 학습 완료된 모델 경로 설정
-from pathlib import Path
+"""기존 import 호환성을 위한 프로젝트 경로 별칭."""
 
-# project 경로
-ROOT_DIR = Path(__file__).parent.parent
+from src.utils.paths import (
+    ARTIFACTS_DIR,
+    DATA_DIR,
+    PROCESSED_DATA_DIR,
+    PROJECT_ROOT,
+    RAW_DATA_DIR,
+)
 
-# project/data 경로
-DATA_DIR = ROOT_DIR / "data"
-# project/artifacts 경로
-ARTIFACTS_DIR = ROOT_DIR / "artifacts"
+ROOT_DIR = PROJECT_ROOT
+RAW_DIR = RAW_DATA_DIR
+PROCESSED_DIR = PROCESSED_DATA_DIR
 
-# project/data/raw 경로
-RAW_DIR = DATA_DIR / "raw"
-# project/data/preprocessing 경로
-PROCESSED_DIR = DATA_DIR / "preprocessing"
+__all__ = ["ARTIFACTS_DIR", "DATA_DIR", "PROCESSED_DIR", "RAW_DIR", "ROOT_DIR"]

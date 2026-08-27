@@ -1,31 +1,29 @@
 """Optuna를 이용한 LightGBM 하이퍼파라미터 튜닝."""
 
 import argparse
-import json
 from typing import Any
 
-import joblib
 import optuna
-import pandas as pd
 from lightgbm import LGBMClassifier
 from optuna.trial import Trial
 from sklearn.model_selection import StratifiedKFold, cross_val_score
 from sklearn.pipeline import Pipeline
 
-from .train import (
-    MODELS_DIR,
-    REPORTS_DIR,
+from src.data.loader import load_processed_train_test_features
+from src.utils.artifact_io import save_tuned_ml_artifacts
+from src.utils.constants import RANDOM_STATE
+from src.utils.metrics import evaluate_sklearn_model
+from src.utils.ml_training import (
     create_training_pipeline,
-    load_train_test_data,
     make_train_validation_split,
 )
-from .utils import RANDOM_STATE, evaluate_model
-from .promotion import promote_tuned_model
+from src.utils.model_promotion import promote_tuned_model
+from src.utils.paths import ML_ARTIFACTS_DIR, REPORTS_DIR
 
 CV_FOLDS = 5
 DEFAULT_TRIALS = 50
 DEFAULT_TIMEOUT = 600
-TUNED_MODEL_PATH = MODELS_DIR / "lightgbm_tuned.joblib"
+TUNED_MODEL_PATH = ML_ARTIFACTS_DIR / "lightgbm_tuned.joblib"
 TUNED_METRICS_PATH = REPORTS_DIR / "lightgbm_tuned_metrics.csv"
 TUNED_PARAMS_PATH = REPORTS_DIR / "lightgbm_tuned_params.json"
 
@@ -72,7 +70,7 @@ def run_tuning(
     dict[str, Any],
 ]:
 
-    X, y, X_test, y_test = load_train_test_data()
+    X, y, X_test, y_test = load_processed_train_test_features()
     X_train, X_valid, y_train, y_valid = make_train_validation_split(X, y)
     cv = StratifiedKFold(
         n_splits=CV_FOLDS,
@@ -105,7 +103,7 @@ def run_tuning(
         X_train,
     )
     validation_model.fit(X_train, y_train)
-    validation_metrics = evaluate_model(validation_model, X_valid, y_valid)
+    validation_metrics = evaluate_sklearn_model(validation_model, X_valid, y_valid)
 
     print(f"\nBest CV ROC-AUC : {study.best_value:.4f}")
     print(f"Validation AUC   : {validation_metrics['roc_auc']:.4f}")
@@ -115,7 +113,7 @@ def run_tuning(
 
     final_model = create_training_pipeline(create_model(best_params), X)
     final_model.fit(X, y)
-    test_metrics = evaluate_model(final_model, X_test, y_test)
+    test_metrics = evaluate_sklearn_model(final_model, X_test, y_test)
     return final_model, validation_metrics, test_metrics, best_params
 
 
@@ -132,16 +130,14 @@ def main() -> None:
         timeout=args.timeout,
     )
 
-    MODELS_DIR.mkdir(parents=True, exist_ok=True)
-    REPORTS_DIR.mkdir(parents=True, exist_ok=True)
-    joblib.dump(model, TUNED_MODEL_PATH)
-    pd.DataFrame([{"model": "lightgbm_tuned", **metrics}]).to_csv(
+    save_tuned_ml_artifacts(
+        model,
+        TUNED_MODEL_PATH,
+        "lightgbm_tuned",
+        metrics,
         TUNED_METRICS_PATH,
-        index=False,
-    )
-    TUNED_PARAMS_PATH.write_text(
-        json.dumps(best_params, ensure_ascii=False, indent=2),
-        encoding="utf-8",
+        best_params,
+        TUNED_PARAMS_PATH,
     )
     promoted, promotion_message = promote_tuned_model(
         "lightgbm",
