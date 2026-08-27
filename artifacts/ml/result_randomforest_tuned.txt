@@ -1,0 +1,14 @@
+=== Fine-Tuned Random Forest Model Evaluation ===
+
+Best Params: {'max_depth': 12, 'max_features': 'sqrt', 'min_samples_leaf': 1, 'min_samples_split': 5, 'n_estimators': 200}
+
+              precision    recall  f1-score   support
+
+           0       0.77      0.74      0.76      6252
+           1       0.73      0.76      0.74      5668
+
+    accuracy                           0.75     11920
+   macro avg       0.75      0.75      0.75     11920
+weighted avg       0.75      0.75      0.75     11920
+
+ROC-AUC Score: 0.8393
