@@ -1,7 +1,7 @@
 import streamlit as st
 
 from src.data.loader import load_raw_train
-from streamlit_ui import apply_page_style, page_header
+from streamlit_ui import apply_page_style, page_header, top_navigation
 
 st.set_page_config(
     page_title="퇴사 예측 연구소",
@@ -9,6 +9,7 @@ st.set_page_config(
 )
 
 apply_page_style()
+top_navigation("main")
 page_header(
     "직원 퇴사 예측 연구",
     "퇴사 예측 연구소",
@@ -31,8 +32,16 @@ st.subheader("둘러보기")
 st.markdown(
     """
     <div class="nav-list">
-        <a class="nav-row" href="/ML_Comparison" target="_self">
+        <a class="nav-row" href="/Attrition_Prediction" target="_self">
             <span class="nav-row-index">01</span>
+            <span class="nav-row-text">
+                <span class="nav-row-title">퇴사 예측</span>
+                <span class="nav-row-desc">연봉 협상부터 팀 구성, 인사발령, 전사 안정도까지 스크롤로 확인해요.</span>
+            </span>
+            <span class="nav-row-arrow">&rarr;</span>
+        </a>
+        <a class="nav-row" href="/ML_Comparison" target="_self">
+            <span class="nav-row-index">02</span>
             <span class="nav-row-text">
                 <span class="nav-row-title">머신러닝 비교</span>
                 <span class="nav-row-desc">기본·튜닝 모델의 검증 성능을 나란히 봐요.</span>
@@ -40,7 +49,7 @@ st.markdown(
             <span class="nav-row-arrow">&rarr;</span>
         </a>
         <a class="nav-row" href="/DL_Performance" target="_self">
-            <span class="nav-row-index">02</span>
+            <span class="nav-row-index">03</span>
             <span class="nav-row-text">
                 <span class="nav-row-title">딥러닝 성능</span>
                 <span class="nav-row-desc">MLP 학습 결과가 저장되면 바로 표시해요.</span>
@@ -48,7 +57,7 @@ st.markdown(
             <span class="nav-row-arrow">&rarr;</span>
         </a>
         <a class="nav-row" href="/ML_vs_DL" target="_self">
-            <span class="nav-row-index">03</span>
+            <span class="nav-row-index">04</span>
             <span class="nav-row-text">
                 <span class="nav-row-title">머신러닝과 딥러닝 비교</span>
                 <span class="nav-row-desc">두 계열의 최고 모델을 같은 지표로 비교해요.</span>
@@ -56,7 +65,7 @@ st.markdown(
             <span class="nav-row-arrow">&rarr;</span>
         </a>
         <a class="nav-row" href="/Final_Scenario_Test" target="_self">
-            <span class="nav-row-index">04</span>
+            <span class="nav-row-index">05</span>
             <span class="nav-row-text">
                 <span class="nav-row-title">시나리오</span>
                 <span class="nav-row-desc">직원 조건을 바꿔 퇴사 확률 변화를 살펴봐요.</span>

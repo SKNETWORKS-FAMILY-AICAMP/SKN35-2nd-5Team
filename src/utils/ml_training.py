@@ -17,6 +17,7 @@ MODEL_SPECS = {
     "random_forest": ("random_forest", "create_random_forest"),
     "xgboost": ("xgboost", "create_xgboost"),
     "lightgbm": ("lightgbm", "create_lightgbm"),
+    "gradient_boosting": ("grandient_boosting", "create_gradient_boosting"),
 }
 
 
