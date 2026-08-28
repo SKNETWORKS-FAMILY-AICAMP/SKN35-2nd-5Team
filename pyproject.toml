@@ -21,6 +21,7 @@ dependencies = [
     "plotly==5.24.1",
     "nbformat>=5.10.4",
     "pymysql>=1.2.0",
+    "mysql-connector-python>=26.7.0",
 ]
 
 [dependency-groups]
