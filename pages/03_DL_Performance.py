@@ -5,9 +5,9 @@ import streamlit as st
 
 from streamlit_ui import apply_page_style, home_button, page_header
 
-st.set_page_config(page_title="딥러닝 성능", page_icon="🧠", layout="wide")
+st.set_page_config(page_title="딥러닝 성능", layout="wide")
 
-REPORT_PATH = Path("artifacts/reports/dl_metrics.csv")
+REPORT_PATH = Path("artifacts/reports/mlp_test_metrics.csv")
 METRIC_LABELS = {
     "accuracy": "정확도",
     "precision": "정밀도",
@@ -30,13 +30,13 @@ apply_page_style()
 home_button()
 page_header(
     "딥러닝 모델 분석",
-    "딥러닝 성능 🧠",
+    "딥러닝 성능",
     "저장된 MLP의 성능과 학습 기록을 편하게 확인해요.",
 )
 
 if not REPORT_PATH.exists():
     st.info(
-        "아직 `artifacts/reports/dl_metrics.csv`가 없어요. "
+        "아직 `artifacts/reports/mlp_test_metrics.csv`가 없어요. "
         "MLP 학습이 끝난 뒤 성능 리포트를 저장하면 이 화면에 자동으로 나타납니다."
     )
     st.stop()
@@ -49,12 +49,13 @@ if missing_columns:
     st.stop()
 
 best = report.sort_values(["roc_auc", "f1"], ascending=False).iloc[0]
-summary = st.columns(5)
-summary[0].metric("모델", str(best["model"]).upper())
-summary[1].metric("정확도", f"{best['accuracy']:.4f}")
-summary[2].metric("ROC 곡선 면적", f"{best['roc_auc']:.4f}")
-summary[3].metric("F1 점수", f"{best['f1']:.4f}")
-summary[4].metric("재현율", f"{best['recall']:.4f}")
+with st.container(key="stat-bar"):
+    summary = st.columns(5)
+    summary[0].metric("모델", str(best["model"]).upper())
+    summary[1].metric("정확도", f"{best['accuracy']:.4f}")
+    summary[2].metric("ROC 곡선 면적", f"{best['roc_auc']:.4f}")
+    summary[3].metric("F1 점수", f"{best['f1']:.4f}")
+    summary[4].metric("재현율", f"{best['recall']:.4f}")
 
 display_columns = ["model", *[column for column in METRIC_LABELS if column in report.columns]]
 display = report[display_columns].rename(columns={"model": "모델", **METRIC_LABELS})
@@ -71,9 +72,7 @@ formats = {
 
 st.subheader("딥러닝 모델 성능")
 st.dataframe(
-    display.style.format(
-        {key: value for key, value in formats.items() if key in display.columns}
-    ),
+    display.style.format({key: value for key, value in formats.items() if key in display.columns}),
     width="stretch",
     hide_index=True,
 )
