@@ -38,7 +38,7 @@
 │   └── reports/                      # ML/DL 공통 성능 리포트
 │       ├── ml_leaderboard.csv        # ML 모델별 검증 성능
 │       ├── best_ml_test_metrics.csv  # 최고 ML 모델 테스트 성능
-│       └── dl_metrics.csv            # DL 모델 테스트 성능
+│       └── mlp_test_metrics.csv            # DL 모델 테스트 성능
 │
 ├── data/                             # 프로젝트 데이터
 │   ├── preprocessing/                # 전처리된 데이터
@@ -154,7 +154,6 @@ data/preprocessing/train_processed.csv
 - 전처리 파일에는 `Left=0`, `Stayed=1`로 저장되어 있으나, 공통 학습 시
   퇴사를 양성 클래스로 평가하기 위해 `Left=1`, `Stayed=0`으로 변환
 
-
 `train.py`는 개별 모델을 구현하는 파일이 아니라 팀원들이 만든 모델을 동일한 조건으로
 학습하고 비교하는 공통 관리자입니다.
 
@@ -173,12 +172,12 @@ data/preprocessing/train_processed.csv
 각 모델 담당자는 원칙적으로 공통 `train.py`를 수정하지 않고 담당 모델 파일에 다음
 이름의 생성 함수를 구현합니다.
 
-| 담당 모델 | 파일 | 필수 생성 함수 |
-|---|---|---|
+| 담당 모델           | 파일                     | 필수 생성 함수                 |
+| ------------------- | ------------------------ | ------------------------------ |
 | Logistic Regression | `logistic_regression.py` | `create_logistic_regression()` |
-| Random Forest | `random_forest.py` | `create_random_forest()` |
-| XGBoost | `xgboost.py` | `create_xgboost()` |
-| LightGBM | `lightgbm.py` | `create_lightgbm()` |
+| Random Forest       | `random_forest.py`       | `create_random_forest()`       |
+| XGBoost             | `xgboost.py`             | `create_xgboost()`             |
+| LightGBM            | `lightgbm.py`            | `create_lightgbm()`            |
 
 생성 함수는 아직 학습되지 않은 scikit-learn 호환 분류기 또는 `Pipeline` 객체를
 반환해야 합니다. 데이터 로드, 데이터 분할, 공통 평가, 모델 저장은 각 모델 파일에서
@@ -214,7 +213,6 @@ XGBoost 전체 하이퍼파라미터 튜닝은 다음 명령으로 실행합니�
 ```powershell
 uv run python -m src.models.ml.xgboost_tuning
 ```
-
 
 ### Git 협업 규칙
 

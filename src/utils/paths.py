@@ -16,7 +16,7 @@ REPORTS_DIR = ARTIFACTS_DIR / "reports"
 
 ML_LEADERBOARD_PATH = REPORTS_DIR / "ml_leaderboard.csv"
 BEST_ML_TEST_METRICS_PATH = REPORTS_DIR / "best_ml_test_metrics.csv"
-DL_METRICS_PATH = REPORTS_DIR / "dl_metrics.csv"
+DL_METRICS_PATH = REPORTS_DIR / "mlp_test_metrics.csv"
 BEST_ML_MODEL_PATH = ML_ARTIFACTS_DIR / "best_ml_model.joblib"
 
 MLP_MODEL_PATH = DL_ARTIFACTS_DIR / "mlp_model.pt"

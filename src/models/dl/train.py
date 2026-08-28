@@ -2,6 +2,7 @@ import random
 import time
 from copy import deepcopy
 
+import joblib
 import numpy as np
 import optuna
 import torch
@@ -18,12 +19,17 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from torch.utils.data import DataLoader, TensorDataset
 
-from src.data.loader import load_processed_test, load_processed_train
+from src.data.loader import load_processed_train
 from src.models.dl.mlp_model import MLPClassifier
-from src.utils.artifact_io import save_dl_artifacts
 from src.utils.constants import RANDOM_STATE, VAL_SIZE
-from src.utils.metrics import print_binary_metrics
-from src.utils.paths import DL_ARTIFACTS_DIR, DL_METRICS_PATH
+from src.utils.paths import (
+    MLP_BEST_PARAMS_PATH,
+    MLP_METADATA_PATH,
+    MLP_MODEL_PATH,
+    MLP_PREPROCESSOR_PATH,
+    MLP_THRESHOLD_PATH,
+    ensure_artifact_dirs,
+)
 
 # Optuna 로깅 레벨 설정 (경고만 출력)
 optuna.logging.set_verbosity(optuna.logging.WARNING)
@@ -70,49 +76,11 @@ def get_device() -> torch.device:
 
 
 # ==============================================================================
-# 2. 정형 데이터 특화 신경망 아키텍처 (Tabular ResNet / MLP)
-# ==============================================================================
-
-
-def get_activation(act_name: str) -> nn.Module:
-    """선택된 문자열에 해당하는 활성화 함수 모듈을 반환합니다."""
-    act_lower = str(act_name).lower()
-    if act_lower == "gelu":
-        return nn.GELU()
-    elif act_lower == "silu":
-        return nn.SiLU()
-    elif act_lower == "leaky_relu":
-        return nn.LeakyReLU(0.1)
-    return nn.ReLU()
-
-
-class ResidualBlock(nn.Module):
-    """정형 데이터의 피처 보존 및 그래디언트 흐름을 극대화하는 Residual Block."""
-
-    def __init__(self, dim: int, dropout: float = 0.2, act_name: str = "gelu"):
-        super().__init__()
-        act_fn = get_activation(act_name)
-        self.block = nn.Sequential(
-            nn.BatchNorm1d(dim),
-            act_fn,
-            nn.Dropout(dropout),
-            nn.Linear(dim, dim),
-            nn.BatchNorm1d(dim),
-            act_fn,
-            nn.Dropout(dropout),
-            nn.Linear(dim, dim),
-        )
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return x + self.block(x)
-
-
-# ==============================================================================
 # 3. 데이터 전처리 및 DataLoader 구성
 # ==============================================================================
 
 
-def prepare_dataloaders(train_df, test_df, target_col="Attrition", batch_size=128):
+def prepare_dataloaders(train_df, target_col="Attrition", batch_size=128):
     """
     연속형 피처는 StandardScaler로 정규화하고, 0/1 바이너리/원핫 피처는 보존합니다.
     """
@@ -130,9 +98,6 @@ def prepare_dataloaders(train_df, test_df, target_col="Attrition", batch_size=12
         random_state=RANDOM_STATE,
     )
 
-    X_test = test_df.drop(columns=[c for c in drop_cols if c in test_df.columns])
-    y_test = test_df[target_col]
-
     # 이진(0/1) 피처와 연속형 피처 분리
     binary_cols = [c for c in X_train.columns if set(X_train[c].dropna().unique()).issubset({0, 1})]
     continuous_cols = [c for c in X_train.columns if c not in binary_cols]
@@ -145,14 +110,12 @@ def prepare_dataloaders(train_df, test_df, target_col="Attrition", batch_size=12
 
     X_train_scaled = preprocessor.fit_transform(X_train)
     X_val_scaled = preprocessor.transform(X_val)
-    X_test_scaled = preprocessor.transform(X_test)
 
     X_train_t = torch.tensor(X_train_scaled, dtype=torch.float32)
     y_train_t = torch.tensor(y_train.to_numpy(), dtype=torch.float32).reshape(-1, 1)
+
     X_val_t = torch.tensor(X_val_scaled, dtype=torch.float32)
     y_val_t = torch.tensor(y_val.to_numpy(), dtype=torch.float32).reshape(-1, 1)
-    X_test_t = torch.tensor(X_test_scaled, dtype=torch.float32)
-    y_test_t = torch.tensor(y_test.to_numpy(), dtype=torch.float32).reshape(-1, 1)
 
     train_loader = DataLoader(
         TensorDataset(X_train_t, y_train_t),
@@ -165,16 +128,11 @@ def prepare_dataloaders(train_df, test_df, target_col="Attrition", batch_size=12
         batch_size=batch_size * 2,
         shuffle=False,
     )
-    test_loader = DataLoader(
-        TensorDataset(X_test_t, y_test_t),
-        batch_size=batch_size * 2,
-        shuffle=False,
-    )
 
     in_features = X_train_scaled.shape[1]
     feature_names = list(X.columns)
 
-    return train_loader, val_loader, test_loader, preprocessor, in_features, feature_names
+    return train_loader, val_loader, preprocessor, in_features, feature_names
 
 
 # ==============================================================================
@@ -184,7 +142,6 @@ def prepare_dataloaders(train_df, test_df, target_col="Attrition", batch_size=12
 
 def run_optuna_search(
     train_df,
-    test_df,
     n_trials=50,
     epochs=40,
 ):
@@ -220,8 +177,8 @@ def run_optuna_search(
         params["weight_decay"] = trial.suggest_float("weight_decay", 1e-6, 1e-2, log=True)
 
         set_seed(RANDOM_STATE)
-        train_loader, val_loader, _, _, in_features, _ = prepare_dataloaders(
-            train_df, test_df, batch_size=batch_size
+        train_loader, val_loader, _, in_features, _ = prepare_dataloaders(
+            train_df, batch_size=batch_size
         )
 
         model = MLPClassifier(params, in_features).to(device)
@@ -549,30 +506,21 @@ def main():
     print("==================================================")
     print(" Deep Learning (MLP / Tabular ResNet) Training")
     print(f" Acceleration Device : {device}")
-    print("==================================================")
 
     train_df = load_processed_train()
-    test_df = load_processed_test()
 
     # 1. 하이퍼파라미터 최적화
-    best_params = run_optuna_search(train_df, test_df, n_trials=150, epochs=40)
+    best_params = run_optuna_search(train_df, n_trials=150, epochs=40)
 
     # 2. 최적 배치 사이즈로 최종 DataLoader 구성
     batch_size = best_params.get("batch_size", 128)
     (
         train_loader,
         val_loader,
-        test_loader,
         preprocessor,
         in_features,
         feature_names,
-    ) = prepare_dataloaders(train_df, test_df, batch_size=batch_size)
-
-    print("\n[ Final DataLoader ]")
-    print(f"Input features count : {in_features}")
-    print(f"Train batches        : {len(train_loader)} (batch_size={batch_size})")
-    print(f"Validation batches   : {len(val_loader)}")
-    print(f"Test batches         : {len(test_loader)}")
+    ) = prepare_dataloaders(train_df, batch_size=batch_size)
 
     # 3. 최종 모델 학습
     model = train_final_model(
@@ -584,18 +532,12 @@ def main():
         patience=20,
     )
 
+    print("\n" + "=" * 50)
+    print("Training Completed")
+
     # 4. 검증셋 기준 임계값 최적화
     val_true, val_proba = get_predictions(model, val_loader)
     best_threshold = find_best_threshold(val_true, val_proba, min_recall=0.80)
-
-    # 5. 독립 테스트셋 최종 평가
-    test_true, test_proba = get_predictions(model, test_loader)
-    test_pred = apply_threshold(test_proba, best_threshold)
-
-    print("\n" + "=" * 50)
-    print("Final Test Evaluation")
-    print("=" * 50)
-    test_metrics = {"model": "mlp", **print_binary_metrics(test_true, test_pred, test_proba)}
 
     # 6. 모델 구성요소와 공통 스키마의 DL 성능 CSV 저장
     metadata = {
@@ -604,19 +546,14 @@ def main():
         "best_threshold": best_threshold,
         "best_params": best_params,
     }
-    save_dl_artifacts(
-        model,
-        preprocessor,
-        best_params,
-        best_threshold,
-        metadata,
-        test_metrics,
-    )
 
-    print("\n모델 학습 및 저장 완료")
-    print(f"저장 경로      : {DL_ARTIFACTS_DIR}")
-    print(f"성능 리포트    : {DL_METRICS_PATH}")
-    print(f"저장된 Threshold: {best_threshold:.2f}")
+    ensure_artifact_dirs()
+    model_cpu = deepcopy(model).to("cpu")
+    torch.save(model_cpu.state_dict(), MLP_MODEL_PATH)
+    joblib.dump(preprocessor, MLP_PREPROCESSOR_PATH)
+    joblib.dump(dict(best_params), MLP_BEST_PARAMS_PATH)
+    joblib.dump(float(best_threshold), MLP_THRESHOLD_PATH)
+    joblib.dump(dict(metadata), MLP_METADATA_PATH)
 
 
 if __name__ == "__main__":
