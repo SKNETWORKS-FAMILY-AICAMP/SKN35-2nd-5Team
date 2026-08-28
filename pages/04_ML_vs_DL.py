@@ -7,7 +7,7 @@ from streamlit_ui import apply_page_style, home_button, page_header
 
 st.set_page_config(page_title="머신러닝과 딥러닝 비교", layout="wide")
 
-ML_REPORT_PATH = Path("artifacts/reports/ml_leaderboard.csv")
+ML_REPORT_PATH = Path("artifacts/reports/best_ml_test_metrics.csv")
 DL_REPORT_PATH = Path("artifacts/reports/mlp_test_metrics.csv")
 MODEL_LABELS = {
     "logistic_regression": "Logistic Regression",
