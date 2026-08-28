@@ -8,28 +8,19 @@ from lightgbm import LGBMClassifier
 from optuna.trial import Trial
 from sklearn.model_selection import StratifiedKFold, cross_val_score
 from sklearn.pipeline import Pipeline
-
-<<<<<<< HEAD
 from src.data.loader import load_processed_train_test_features
 from src.utils.artifact_io import save_tuned_ml_artifacts
 from src.utils.constants import RANDOM_STATE
 from src.utils.metrics import evaluate_sklearn_model
 from src.utils.ml_training import (
-=======
-from .promotion import promote_tuned_model
-from .train import (
-    MODELS_DIR,
-    REPORTS_DIR,
->>>>>>> feat/chan
     create_training_pipeline,
     make_train_validation_split,
 )
-<<<<<<< HEAD
+
 from src.utils.model_promotion import promote_tuned_model
 from src.utils.paths import ML_ARTIFACTS_DIR, REPORTS_DIR
-=======
-from .utils import RANDOM_STATE, evaluate_model
->>>>>>> feat/chan
+
+
 
 CV_FOLDS = 5
 DEFAULT_TRIALS = 50
