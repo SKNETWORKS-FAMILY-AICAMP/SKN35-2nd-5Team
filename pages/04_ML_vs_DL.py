@@ -3,7 +3,7 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
-from streamlit_ui import apply_page_style, home_button, page_header
+from streamlit_ui import apply_page_style, page_header, top_navigation
 
 st.set_page_config(page_title="머신러닝과 딥러닝 비교", layout="wide")
 
@@ -33,7 +33,7 @@ def load_report(path: str, modified_time: float) -> pd.DataFrame:
 
 
 apply_page_style()
-home_button()
+top_navigation("models")
 page_header(
     "최종 모델 비교",
     "최고 머신러닝과 딥러닝 비교",

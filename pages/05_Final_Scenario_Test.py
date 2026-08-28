@@ -11,7 +11,7 @@ from src.data.prediction import (
     load_prediction_model,
     prepare_model_input,
 )
-from streamlit_ui import apply_page_style, home_button, page_header
+from streamlit_ui import apply_page_style, page_header, top_navigation
 from wheel_picker import wheel_picker_component
 
 st.set_page_config(page_title="퇴사 위험 시나리오", page_icon="✨", layout="wide")
@@ -111,7 +111,7 @@ def wheel_picker(
 
 
 apply_page_style()
-home_button()
+top_navigation("attrition")
 page_header(
     "조건 변화 모의실험",
     "퇴사 위험 시나리오 ✨",
