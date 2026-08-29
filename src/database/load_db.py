@@ -100,6 +100,32 @@ def get_processed_data(data_type):
             connection.close()
 
 
+def get_prediction_data():
+    """DB에 저장된 직원별 이탈 예측 확률을 조회합니다."""
+    connection = None
+    cursor = None
+
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor(dictionary=True)
+        cursor.execute(
+            """
+            SELECT employee_id, prediction
+            FROM employee_attrition_prediction
+            """
+        )
+        return cursor.fetchall()
+    except Exception:
+        if connection:
+            connection.rollback()
+        raise
+    finally:
+        if cursor:
+            cursor.close()
+        if connection:
+            connection.close()
+
+
 # if __name__ == "__main__":
 # get_raw_data("train")
 # get_raw_data("test")
