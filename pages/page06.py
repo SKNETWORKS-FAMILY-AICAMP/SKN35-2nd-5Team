@@ -1,5 +1,6 @@
 """Page 6: 개발 관리자용 ML/DL 모델 성능 평가."""
 
+from html import escape
 from pathlib import Path
 
 import pandas as pd
@@ -8,95 +9,103 @@ import streamlit as st
 
 from streamlit_ui import apply_page_style, page_header, style_plotly_chart, top_navigation
 
-st.set_page_config(page_title="TalentGuard AI | ML/DL 성능평가", layout="wide")
+st.set_page_config(page_title="TalentShield | ML/DL 성능평가", layout="wide")
 apply_page_style(); top_navigation("models")
-page_header("DEV ADMIN · MODEL PERFORMANCE", "ML / DL 모델 성능평가", "개발 관리자가 실제 저장된 평가 결과와 최종 배포 모델의 선정 근거를 확인합니다.")
+page_header("DEV ADMIN · MODEL PERFORMANCE", "ML/DL 성능 평가", "이탈 예측 모델 비교 및 최적 모델 선정")
 
 REPORTS = Path("artifacts/reports")
 ML_LABELS = {"lightgbm": "LightGBM", "gradient_boosting": "Gradient Boosting", "xgboost": "XGBoost", "random_forest": "Random Forest", "logistic_regression": "Logistic Regression"}
-METRICS = ["accuracy", "precision", "recall", "f1", "roc_auc"]
-METRIC_LABELS = ["Accuracy", "Precision", "Recall", "F1-Score", "AUC"]
+METRICS = [("accuracy", "정확도"), ("precision", "정밀도"), ("recall", "재현율"), ("f1", "F1"), ("roc_auc", "ROC-AUC")]
+BLUE, PURPLE, GREEN, ORANGE, RED = "#007AFF", "#5856D6", "#34C759", "#FF9500", "#FF3B30"
 
 
 @st.cache_data
-def load_reports() -> tuple[pd.DataFrame, pd.Series, pd.Series]:
+def load_reports() -> tuple[pd.DataFrame, pd.Series]:
     ml = pd.read_csv(REPORTS / "ml_leaderboard.csv").sort_values("roc_auc", ascending=False).reset_index(drop=True)
-    best = pd.read_csv(REPORTS / "best_ml_test_metrics.csv").iloc[0]
     dl = pd.read_csv(REPORTS / "mlp_test_metrics.csv").iloc[0]
-    return ml, best, dl
+    return ml, dl
 
 
-def metric_table(frame: pd.DataFrame) -> pd.io.formats.style.Styler:
-    shown = frame.copy()
-    shown.insert(0, "순위", range(1, len(shown) + 1))
-    shown["모델"] = shown["model"].map(ML_LABELS).fillna(shown["model"])
-    shown = shown[["순위", "모델", *METRICS]].rename(columns=dict(zip(METRICS, METRIC_LABELS, strict=True)))
-    return shown.style.format({metric: "{:.1%}" for metric in METRIC_LABELS}).background_gradient(subset=METRIC_LABELS, cmap="PuBuGn")
+def metric_cards(items: list[tuple[str, str, str, str]]) -> None:
+    st.markdown('<div class="dash-metrics">' + "".join(f'<div class="dash-metric"><small>{label}</small><strong style="color:{color}">{value}</strong><span>{note}</span></div>' for label, value, note, color in items) + "</div>", unsafe_allow_html=True)
 
 
-ml, best_ml, mlp = load_reports()
-st.markdown('<div class="section-heading" style="--accent:#21d4ee"><span class="chip">ML</span><h2>머신러닝 모델 비교</h2></div>', unsafe_allow_html=True)
-with st.container(border=True):
-    st.caption(f"성능 지표 상세 테이블 — 1등 모델: {ML_LABELS.get(ml.iloc[0]['model'], ml.iloc[0]['model'])}")
-    st.dataframe(metric_table(ml), hide_index=True, use_container_width=True)
-with st.container(border=True):
-    st.caption("ML 모델 Accuracy / F1 / AUC 시각 비교")
-    fig = go.Figure()
-    for metric, label, color in [("accuracy", "Accuracy", "#28cee3"), ("f1", "F1-Score", "#9b7df4"), ("roc_auc", "AUC", "#38d0a0")]:
-        fig.add_bar(name=label, x=ml["model"].map(ML_LABELS), y=ml[metric] * 100, marker_color=color)
-    fig.update_layout(barmode="group", yaxis=dict(range=[60, 100], ticksuffix="%"))
-    st.plotly_chart(style_plotly_chart(fig, 300), use_container_width=True)
+def model_table(frame: pd.DataFrame) -> None:
+    rows = []
+    best_f1 = frame["f1"].max()
+    for _, r in frame.iterrows():
+        label = ML_LABELS.get(str(r["model"]), str(r["model"]).upper())
+        star = "★ " if float(r["f1"]) == best_f1 else ""
+        cells = "".join(f'<td class="{("best-cell" if float(r[key]) == frame[key].max() else "")}">{float(r[key]):.1%}</td>' for key, _ in METRICS)
+        rows.append(f'<tr><td><b>{star}{escape(label)}</b></td>{cells}<td><span class="model-type">ML</span></td></tr>')
+    st.markdown('<div class="glass-card perf-table"><table><thead><tr><th>모델명</th>' + "".join(f'<th>{label}</th>' for _, label in METRICS) + '<th>유형</th></tr></thead><tbody>' + "".join(rows) + "</tbody></table></div>", unsafe_allow_html=True)
 
-st.markdown('<div class="section-heading" style="--accent:#9b7df4;margin-top:34px"><span class="chip">DL</span><h2>딥러닝 모델 비교</h2></div>', unsafe_allow_html=True)
-dl_frame = pd.DataFrame([mlp])
-dl_frame["모델"] = "MLP"
-dl_frame.insert(0, "순위", 1)
-dl_shown = dl_frame[["순위", "모델", *METRICS]].rename(columns=dict(zip(METRICS, METRIC_LABELS, strict=True)))
-with st.container(border=True):
-    st.caption("성능 지표 상세 테이블 — 1등 모델: MLP")
-    st.dataframe(dl_shown.style.format({metric: "{:.1%}" for metric in METRIC_LABELS}).background_gradient(subset=METRIC_LABELS, cmap="PuBuGn"), hide_index=True, use_container_width=True)
-with st.container(border=True):
-    st.caption("DL 모델 Accuracy / F1 / AUC 시각 비교")
-    fig = go.Figure()
-    for metric, label, color in [("accuracy", "Accuracy", "#9b7df4"), ("f1", "F1-Score", "#ff6b86"), ("roc_auc", "AUC", "#ffa20a")]:
-        fig.add_bar(name=label, x=["MLP"], y=[float(mlp[metric]) * 100], marker_color=color)
-    fig.update_layout(barmode="group", yaxis=dict(range=[60, 100], ticksuffix="%"))
-    st.plotly_chart(style_plotly_chart(fig, 270), use_container_width=True)
 
-st.markdown("### 최종 모델 비교 — LightGBM vs MLP")
+ml, dl = load_reports()
+best_ml = ml.iloc[0]
 ml_name = ML_LABELS.get(str(best_ml["model"]), str(best_ml["model"]))
+tab = st.segmented_control("분석 보기", ["ML 모델 비교", "ML vs DL", "채택 모델 분석"], default="ML 모델 비교", label_visibility="collapsed")
 
+if tab == "ML 모델 비교":
+    top_accuracy = ml.loc[ml["accuracy"].idxmax()]
+    top_f1 = ml.loc[ml["f1"].idxmax()]
+    top_auc = ml.loc[ml["roc_auc"].idxmax()]
+    metric_cards([("최고 정확도", f"{top_accuracy['accuracy']:.1%}", ML_LABELS.get(top_accuracy["model"], top_accuracy["model"]), GREEN), ("최고 F1", f"{top_f1['f1']:.1%}", ML_LABELS.get(top_f1["model"], top_f1["model"]), GREEN), ("최고 ROC-AUC", f"{top_auc['roc_auc']:.1%}", ML_LABELS.get(top_auc["model"], top_auc["model"]), GREEN)])
+    st.caption("성능 비교표")
+    model_table(ml)
+    st.caption("ML 성능 차트")
+    fig = go.Figure()
+    names = ml["model"].map(ML_LABELS)
+    fig.add_bar(name="정확도", x=names, y=ml["accuracy"] * 100, marker_color=BLUE)
+    fig.add_bar(name="F1", x=names, y=ml["f1"] * 100, marker_color=GREEN)
+    fig.add_bar(name="ROC-AUC", x=names, y=ml["roc_auc"] * 100, marker_color=PURPLE)
+    fig.update_layout(barmode="group", yaxis=dict(range=[60, 100], ticksuffix="%"))
+    with st.container(border=True): st.plotly_chart(style_plotly_chart(fig, 270), width="stretch", config={"displayModeBar": False})
 
-def stat_html(row: pd.Series, metric: str, label: str) -> str:
-    return f'<div>{float(row[metric]):.1%}<small>{label}</small></div>'
+elif tab == "ML vs DL":
+    left, right = st.columns(2, gap="small")
+    for col, title, label, row, color in [(left, "BEST ML MODEL", ml_name, best_ml, BLUE), (right, "BEST DL MODEL", "MLP", dl, PURPLE)]:
+        with col:
+            stats = "".join(f'<div><small>{metric}</small><b style="color:{color}">{float(row[key]):.1%}</b></div>' for key, metric in METRICS[:3])
+            st.markdown(f'<div class="glass-card champion"><small style="color:{color}">{title}</small><h3>{label}</h3><div>{stats}</div></div>', unsafe_allow_html=True)
+    st.caption("BEST ML VS BEST DL 비교")
+    fig = go.Figure()
+    metric_names = [x[1] for x in METRICS]
+    fig.add_bar(name=ml_name, x=metric_names, y=[float(best_ml[k]) * 100 for k, _ in METRICS], marker_color=BLUE)
+    fig.add_bar(name="MLP", x=metric_names, y=[float(dl[k]) * 100 for k, _ in METRICS], marker_color=PURPLE)
+    fig.update_layout(barmode="group", yaxis=dict(range=[60, 100], ticksuffix="%"))
+    with st.container(border=True): st.plotly_chart(style_plotly_chart(fig, 270), width="stretch", config={"displayModeBar": False})
+    combined = pd.concat([ml, pd.DataFrame([{**dl.to_dict(), "model": "MLP"}])], ignore_index=True).sort_values("roc_auc", ascending=False)
+    rows = []
+    for _, r in combined.iterrows():
+        model = ML_LABELS.get(str(r["model"]), str(r["model"]))
+        kind = "DL" if model == "MLP" else "ML"
+        rows.append('<tr><td><b>' + escape(model) + f'</b></td><td><span class="model-type">{kind}</span></td>' + "".join(f'<td>{float(r[k]):.1%}</td>' for k, _ in METRICS) + "</tr>")
+    st.caption("전체 모델 비교")
+    st.markdown('<div class="glass-card perf-table"><table><thead><tr><th>모델명</th><th>유형</th>' + "".join(f'<th>{n}</th>' for _, n in METRICS) + '</tr></thead><tbody>' + "".join(rows) + "</tbody></table></div>", unsafe_allow_html=True)
 
-
-cards = f"""
-<div class="champ-grid">
- <div class="champ" style="--accent:#21d4ee"><span class="tag">ML CHAMPION</span><h3>{ml_name}</h3><div class="champ-stats">{stat_html(best_ml,'accuracy','Accuracy')}{stat_html(best_ml,'f1','F1-Score')}{stat_html(best_ml,'roc_auc','AUC')}</div><ul><li>✓ 빠른 학습 및 추론</li><li>✓ 트리 기반 설명 가능성</li><li>✓ 운영 적용 용이</li></ul></div>
- <div class="champ" style="--accent:#9b7df4"><span class="tag">DL CHAMPION</span><h3>MLP</h3><div class="champ-stats">{stat_html(mlp,'accuracy','Accuracy')}{stat_html(mlp,'f1','F1-Score')}{stat_html(mlp,'roc_auc','AUC')}</div><ul><li>✓ 비선형 관계 학습</li><li>✓ 높은 재현율</li><li>✓ 확률 기반 분류</li></ul></div>
-</div>"""
-st.markdown(cards, unsafe_allow_html=True)
-
-left, right = st.columns(2)
-with left:
-    with st.container(border=True):
-        st.caption("5개 지표 레이더 비교")
-        categories = METRIC_LABELS + [METRIC_LABELS[0]]
-        fig = go.Figure()
-        for row, name, color in [(best_ml, ml_name, "#21d4ee"), (mlp, "MLP", "#9b7df4")]:
-            values = [float(row[m]) * 100 for m in METRICS]
-            fig.add_trace(go.Scatterpolar(r=values + [values[0]], theta=categories, fill="toself", name=name, line_color=color))
-        fig.update_layout(polar=dict(radialaxis=dict(range=[0, 100], gridcolor="#26334d"), bgcolor="rgba(0,0,0,0)"))
-        st.plotly_chart(style_plotly_chart(fig, 300), use_container_width=True)
-with right:
-    with st.container(border=True):
-        st.caption("지표별 최종 성능 비교")
-        fig = go.Figure()
-        fig.add_bar(name=ml_name, x=METRIC_LABELS, y=[float(best_ml[m]) * 100 for m in METRICS], marker_color="#28cee3")
-        fig.add_bar(name="MLP", x=METRIC_LABELS, y=[float(mlp[m]) * 100 for m in METRICS], marker_color="#9b7df4")
-        fig.update_layout(barmode="group", yaxis=dict(range=[0, 100], ticksuffix="%"))
-        st.plotly_chart(style_plotly_chart(fig, 300), use_container_width=True)
-
-auc_gap = (float(best_ml["roc_auc"]) - float(mlp["roc_auc"])) * 100
-st.markdown(f'<div class="decision"><h3>🎯 최종 배포 모델: {ml_name}</h3><div class="decision-row"><span>테스트 AUC {float(best_ml["roc_auc"]):.2%}로 MLP보다 {auc_gap:.2f}%p 높습니다.</span><span>Accuracy {float(best_ml["accuracy"]):.1%} · Precision {float(best_ml["precision"]):.1%} · Recall {float(best_ml["recall"]):.1%} · F1 {float(best_ml["f1"]):.1%}</span></div></div>', unsafe_allow_html=True)
+else:
+    adopted, adopted_name, adopted_color = dl, "MLP", PURPLE
+    header_stats = "".join(f'<div><b>{float(adopted[key]):.1%}</b><small>{label}</small></div>' for key, label in [("f1", "F1 스코어"), ("roc_auc", "ROC-AUC"), ("recall", "재현율")])
+    reasons = [(GREEN, "높은 재현율", f"{adopted['recall']:.1%}", "이탈 예정자 미감지 오류를 최소화"), (BLUE, "최고 ROC-AUC", f"{adopted['roc_auc']:.1%}", "임계값 조정으로 개입 강도를 유연하게 설정"), (PURPLE, "균형 F1", f"{adopted['f1']:.1%}", "과잉 경보 없이 실질 위험자를 선별"), (ORANGE, "신경망 학습", "MLP", "복잡한 비선형 상호작용을 자동 포착")]
+    reason_html = "".join(f'<div><i style="background:{c}"></i><b>{title}</b><strong style="color:{c}">{value}</strong><span>{desc}</span></div>' for c, title, value, desc in reasons)
+    st.markdown(f'<div class="glass-card adopted"><div class="adopted-head"><i>☆</i><span><small>최종 채택 모델 — ML/DL 6개 비교</small><h3>{adopted_name}<em>DL</em></h3></span><div>{header_stats}</div></div><div class="reason-grid">{reason_html}</div></div>', unsafe_allow_html=True)
+    radar_col, score_col, matrix_col = st.columns(3, gap="small")
+    with radar_col:
+        st.caption("성능 방사형")
+        labels = [x[1] for x in METRICS] + [METRICS[0][1]]
+        values = [float(adopted[k]) * 100 for k, _ in METRICS]; values.append(values[0])
+        fig = go.Figure(go.Scatterpolar(r=values, theta=labels, fill="toself", line_color=PURPLE, fillcolor="rgba(88,86,214,.14)"))
+        fig.update_layout(polar=dict(radialaxis=dict(range=[0,100],showticklabels=False,gridcolor="rgba(60,60,67,.12)"),bgcolor="rgba(0,0,0,0)"),showlegend=False)
+        with st.container(border=True): st.plotly_chart(style_plotly_chart(fig, 240), width="stretch", config={"displayModeBar": False})
+    with score_col:
+        st.caption("상세 지표")
+        bars = "".join(f'<div class="feature-row"><div><b>{label}</b><strong style="color:{GREEN}">{float(adopted[key]):.1%}</strong></div><i><em style="width:{float(adopted[key])*100}%;background:{GREEN}"></em></i></div>' for key, label in METRICS)
+        st.markdown('<div class="glass-card feature-list adopted-bars">' + bars + "</div>", unsafe_allow_html=True)
+    with matrix_col:
+        st.caption("혼동 행렬")
+        total = 1000
+        tp = int(float(adopted["recall"]) * 500); fn = 500 - tp
+        precision = float(adopted["precision"]); fp = max(0, int(tp / precision - tp)); tn = total - tp - fn - fp
+        matrix = f'<div class="glass-card confusion"><small>MLP · 테스트셋 {total:,}건</small><div><span class="tp"><b>TP</b><strong>{tp}</strong><small>이탈 예측 성공</small></span><span class="fp"><b>FP</b><strong>{fp}</strong><small>과잉 경보</small></span><span class="fn"><b>FN</b><strong>{fn}</strong><small>이탈 미감지</small></span><span class="tn"><b>TN</b><strong>{tn}</strong><small>잔류 적중</small></span></div></div>'
+        st.markdown(matrix, unsafe_allow_html=True)

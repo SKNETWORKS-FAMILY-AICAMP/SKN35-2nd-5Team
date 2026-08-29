@@ -2,7 +2,12 @@
 
 import pandas as pd
 
-from src.database.load_db import COLUMN_MAPPING, get_processed_data, get_raw_data
+from src.database.load_db import (
+    COLUMN_MAPPING,
+    get_prediction_data,
+    get_processed_data,
+    get_raw_data,
+)
 from src.utils.constants import TARGET_COLUMN
 
 
@@ -29,6 +34,22 @@ def load_processed_train() -> pd.DataFrame:
 
 def load_processed_test() -> pd.DataFrame:
     return _from_db("test", processed=True)
+
+
+def load_predictions() -> pd.DataFrame:
+    """DB에 저장된 직원별 이탈 예측 결과를 반환합니다."""
+    rows = get_prediction_data()
+    if not rows:
+        raise ValueError("DB에서 이탈 예측 데이터를 찾을 수 없습니다.")
+    frame = pd.DataFrame(rows)
+    required = {"employee_id", "prediction"}
+    missing = required - set(frame.columns)
+    if missing:
+        raise ValueError("예측 DB 컬럼이 없습니다: " + ", ".join(sorted(missing)))
+    if frame["employee_id"].duplicated().any():
+        raise ValueError("예측 DB에 중복된 employee_id가 있습니다.")
+    frame["prediction"] = pd.to_numeric(frame["prediction"], errors="raise")
+    return frame[["employee_id", "prediction"]]
 
 
 def split_processed_features_target(data: pd.DataFrame) -> tuple[pd.DataFrame, pd.Series]:
