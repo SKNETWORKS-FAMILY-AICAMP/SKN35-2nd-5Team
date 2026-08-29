@@ -1,5 +1,3 @@
-from typing import Literal
-
 from dotenv import load_dotenv
 
 from .db import get_db_connection
@@ -36,12 +34,7 @@ COLUMN_MAPPING = {
 }
 
 
-def _select_rows(table_name: str, data_type: Literal["train", "test"]):
-    """지정한 데이터 유형을 안전하게 조회하고 연결 자원을 정리한다."""
-
-    if data_type not in {"train", "test"}:
-        raise ValueError("data_type은 'train' 또는 'test'만 가능합니다.")
-
+def get_raw_data(data_type):
     connection = None
     cursor = None
 
@@ -49,14 +42,17 @@ def _select_rows(table_name: str, data_type: Literal["train", "test"]):
         connection = get_db_connection()
         cursor = connection.cursor(dictionary=True)
 
-        query = (
-            f"SELECT * FROM `{table_name}` "
-            "WHERE `type` = %s ORDER BY `employee_id`"
-        )
+        query = """
+            SELECT *
+            FROM employee_attrition_raw
+            WHERE type = %s
+        """
 
         cursor.execute(query, (data_type,))
 
-        return cursor.fetchall()
+        rows = cursor.fetchall()
+
+        return rows
 
     except Exception:
         if connection:
@@ -71,12 +67,37 @@ def _select_rows(table_name: str, data_type: Literal["train", "test"]):
             connection.close()
 
 
-def get_raw_data(data_type: Literal["train", "test"]):
-    return _select_rows("employee_attrition_raw", data_type)
+def get_processed_data(data_type):
+    connection = None
+    cursor = None
 
+    try:
+        connection = get_db_connection()
+        cursor = connection.cursor(dictionary=True)
 
-def get_processed_data(data_type: Literal["train", "test"]):
-    return _select_rows("employee_attrition_processed", data_type)
+        query = """
+            SELECT *
+            FROM employee_attrition_processed
+            WHERE type = %s
+        """
+
+        cursor.execute(query, (data_type,))
+
+        rows = cursor.fetchall()
+
+        return rows
+
+    except Exception:
+        if connection:
+            connection.rollback()
+        raise
+
+    finally:
+        if cursor:
+            cursor.close()
+
+        if connection:
+            connection.close()
 
 
 # if __name__ == "__main__":

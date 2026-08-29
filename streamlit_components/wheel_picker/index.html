@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: transparent; font-family: sans-serif; }
+    .label { margin: 0 0 8px 3px; color: #302b38; font-size: 14px; font-weight: 650; }
+    .value-button {
+      width: 100%; height: 40px; padding: 0 14px; border: 1px solid transparent;
+      border-radius: 11px; background: #eee3eb; color: #302b38; font-size: 16px;
+      text-align: left; cursor: pointer; transition: border-color .16s ease, box-shadow .16s ease;
+    }
+    .value-button:hover {
+      border-color: transparent;
+      background:
+        linear-gradient(#eee3eb, #eee3eb) padding-box,
+        linear-gradient(105deg, #c53d65, #7965aa, #3f7fc9, #c53d65) border-box;
+      background-size: 100% 100%, 260% 100%;
+      box-shadow: 0 7px 20px rgba(91,73,139,.18);
+      animation: colorFlow 4s ease infinite;
+    }
+    .value-button::after { content: "⌄"; float: right; color: #8f5b6d; font-size: 19px; }
+    .wheel-wrap {
+      position: relative; height: 156px; overflow: hidden; border: 1px solid #e3d6dc;
+      border-radius: 18px; background: linear-gradient(180deg, #f7dde5, #dce8f6);
+      box-shadow: 0 12px 28px rgba(92, 63, 83, .11);
+    }
+    .hidden { display: none; }
+    .wheel-wrap::before {
+      content: ""; position: absolute; z-index: 2; left: 10px; right: 10px; top: 52px;
+      height: 52px; border-radius: 13px; background: rgba(255,255,255,.92);
+      border: 1px solid #c98fa0; box-shadow: 0 6px 16px rgba(104, 70, 89, .13);
+      pointer-events: none;
+    }
+    .wheel-wrap::after {
+      content: ""; position: absolute; z-index: 3; inset: 0; pointer-events: none;
+      background: linear-gradient(180deg, #f8eff2 0%, transparent 35%, transparent 65%, #eef3f8 100%);
+    }
+    .wheel { height: 100%; overflow-y: auto; scroll-snap-type: y mandatory; scrollbar-width: none; }
+    .wheel::-webkit-scrollbar { display: none; }
+    .spacer, .item { height: 52px; flex: none; }
+    .item {
+      position: relative; z-index: 4; display: flex; align-items: center; justify-content: center;
+      scroll-snap-align: center; color: #8d8190; font-size: 20px; cursor: pointer;
+      transition: color .16s ease, font-size .16s ease, font-weight .16s ease;
+    }
+    .item.selected { color: #744457; font-size: 27px; font-weight: 750; }
+    @keyframes colorFlow {
+      0%, 100% { background-position: 0 0, 0% 50%; }
+      50% { background-position: 0 0, 100% 50%; }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script>
+    const root = document.getElementById("root");
+    let timer;
+    let suppressScroll = false;
+    let currentValue;
+    let isOpen = false;
+    const send = (type, extra = {}) => window.parent.postMessage(
+      { isStreamlitMessage: true, type, ...extra }, "*"
+    );
+    const setHeight = height => send("streamlit:setFrameHeight", { height });
+    const closeWheel = () => {
+      clearTimeout(timer);
+      suppressScroll = true;
+      isOpen = false;
+      root.querySelector(".wheel-wrap").classList.add("hidden");
+      root.querySelector(".value-button").classList.remove("hidden");
+      setHeight(71);
+      setTimeout(() => { suppressScroll = false; }, 450);
+    };
+    const choose = (wheel, items, index, notify = true, close = false) => {
+      items.forEach((item, i) => item.classList.toggle("selected", i === index));
+      currentValue = items[index].dataset.value;
+      root.querySelector(".value-button").textContent = items[index].textContent;
+      if (notify) send("streamlit:setComponentValue", { value: currentValue });
+      if (close) closeWheel();
+    };
+    const render = ({ label, options, labels, value }) => {
+      const buttonClass = isOpen ? "value-button hidden" : "value-button";
+      const wheelClass = isOpen ? "wheel-wrap" : "wheel-wrap hidden";
+      root.innerHTML = `<div class="label"></div><button type="button" class="${buttonClass}"></button>` +
+        `<div class="${wheelClass}"><div class="wheel"></div></div>`;
+      root.querySelector(".label").textContent = label;
+      const button = root.querySelector(".value-button");
+      const wheel = root.querySelector(".wheel");
+      wheel.innerHTML = '<div class="spacer"></div>' + options.map((option, i) =>
+        `<div class="item" data-value="${String(option)}">${labels[i]}</div>`
+      ).join("") + '<div class="spacer"></div>';
+      const items = [...wheel.querySelectorAll(".item")];
+      const visibleValue = currentValue === undefined ? value : currentValue;
+      let selected = Math.max(0, options.map(String).indexOf(String(visibleValue)));
+      button.textContent = labels[selected];
+      button.addEventListener("click", () => {
+        isOpen = true;
+        button.classList.add("hidden");
+        root.querySelector(".wheel-wrap").classList.remove("hidden");
+        setHeight(188);
+        suppressScroll = true;
+        wheel.scrollTop = selected * 52;
+        setTimeout(() => { suppressScroll = false; }, 120);
+      });
+      items.forEach((item, index) => item.addEventListener("click", () => {
+        selected = index;
+        choose(wheel, items, selected, true, true);
+      }));
+      wheel.addEventListener("scroll", () => {
+        if (suppressScroll) return;
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+          selected = Math.max(0, Math.min(items.length - 1, Math.round(wheel.scrollTop / 52)));
+          choose(wheel, items, selected, true, true);
+        }, 320);
+      });
+      requestAnimationFrame(() => choose(wheel, items, selected, false));
+      if (isOpen) {
+        suppressScroll = true;
+        requestAnimationFrame(() => {
+          wheel.scrollTop = selected * 52;
+          setTimeout(() => { suppressScroll = false; }, 120);
+        });
+      }
+      setHeight(isOpen ? 188 : 71);
+    };
+    window.addEventListener("message", event => {
+      if (event.data.type === "streamlit:render") render(event.data.args);
+    });
+    send("streamlit:componentReady", { apiVersion: 1 });
+  </script>
+</body>
+</html>

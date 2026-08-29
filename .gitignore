@@ -169,6 +169,8 @@ poetry.toml
 
 # ruff
 .ruff_cache/
+.uv-cache/
+.uv-python/
 
 # LSP config files
 pyrightconfig.json
@@ -176,6 +178,4 @@ pyrightconfig.json
 # End of https://www.toptal.com/developers/gitignore/api/python
 
 # Generated model and report artifacts
-artifacts/models/*.joblib
-artifacts/reports/*.csv
-artifacts/reports/*.json
+

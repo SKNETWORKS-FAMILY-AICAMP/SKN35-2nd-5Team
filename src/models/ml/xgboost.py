@@ -1,11 +1,12 @@
-"""튜닝 전 비교에 사용할 XGBoost 이진 분류 모델 정의."""
+"""공통 80/20 검증에서 튜닝 전 성능을 비교할 XGBoost 모델 정의."""
 
 from xgboost import XGBClassifier
 
-from .utils import RANDOM_STATE
+from src.utils.constants import RANDOM_STATE
 
 
 def create_xgboost() -> XGBClassifier:
+    """퇴사=1, 재직=0인 전처리 데이터용 XGBoost 분류기를 생성한다."""
 
     return XGBClassifier(
         objective="binary:logistic",

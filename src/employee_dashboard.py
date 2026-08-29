@@ -1,163 +1,118 @@
-"""인사팀 Page 2~5에서 공유하는 DB·LightGBM 데이터와 화면 렌더러."""
-
-# ruff: noqa: E501
+"""인사 담당자용 Page 2~5 데이터 계산과 화면 구성."""
 
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
 from src.data.loader import load_raw_test, load_raw_train
 from src.data.prediction import create_employee_predictions, load_prediction_model
-from streamlit_ui import style_plotly_chart
+from streamlit_ui import COLORS, style_plotly_chart
 
-CYAN, VIOLET, AMBER, EMERALD, ROSE = "#22D3EE", "#A78BFA", "#F59E0B", "#34D399", "#FB7185"
 MODEL_PATH = Path("artifacts/ml/best_ml_model.joblib")
+CYAN, VIOLET, AMBER, EMERALD = "#21d4ee", "#9b7df4", "#ffa20a", "#38d0a0"
 
 
-@st.cache_data(ttl=300)
-def load_data() -> tuple[pd.DataFrame, pd.DataFrame]:
-    return load_raw_train(), load_raw_test()
-
-
-@st.cache_resource
-def load_model(path: str, modified_time: float):
-    del modified_time
-    return load_prediction_model(path)
-
-
-@st.cache_data(ttl=300)
-def predict_employees(test: pd.DataFrame, train: pd.DataFrame, path: str, modified_time: float) -> pd.DataFrame:
-    return create_employee_predictions(test, train, load_model(path, modified_time))
-
-
-def score_map(series: pd.Series, mapping: dict[str, float], fallback: float = 50) -> pd.Series:
-    return series.astype(str).map(mapping).fillna(fallback).astype(float)
-
-
-def add_talent_score(frame: pd.DataFrame) -> pd.DataFrame:
-    result = frame.copy()
-    education = score_map(result["Education Level"], {"High School": 40, "Associate Degree": 55, "Bachelor’s Degree": 72, "Bachelor's Degree": 72, "Master’s Degree": 86, "Master's Degree": 86, "PhD": 100})
-    performance = score_map(result["Performance Rating"], {"Low": 35, "Below Average": 45, "Average": 62, "High": 82, "Excellent": 100})
-    reputation = score_map(result["Company Reputation"], {"Poor": 35, "Fair": 55, "Good": 78, "Excellent": 100})
-    tenure = pd.to_numeric(result["Company Tenure"], errors="coerce").fillna(0).clip(0, 30) / 30 * 100
-    leadership = score_map(result["Leadership Opportunities"], {"No": 45, "Yes": 100})
-    result["인재 가치 지수"] = pd.concat([education, performance, reputation, tenure, leadership], axis=1).mean(axis=1).round(1)
-    result["학력 점수"], result["성과 점수"], result["평판 점수"], result["경력 점수"], result["리더십 점수"] = education, performance, reputation, tenure, leadership
-    return result
-
-
+@st.cache_data(show_spinner="DB에서 직원 데이터를 불러오는 중입니다...")
 def get_employees() -> pd.DataFrame:
-    if not MODEL_PATH.exists():
-        raise FileNotFoundError("최종 예측 모델이 없습니다: artifacts/ml/best_ml_model.joblib")
-    train, test = load_data()
-    predictions = predict_employees(test, train, str(MODEL_PATH), MODEL_PATH.stat().st_mtime)
-    return add_talent_score(test.merge(predictions, left_on="Employee ID", right_on="employee_id", how="inner", validate="one_to_one"))
+    train, test = load_raw_train(), load_raw_test()
+    model = load_prediction_model(MODEL_PATH)
+    predictions = create_employee_predictions(test, train, model)
+    frame = test.merge(predictions, left_on="Employee ID", right_on="employee_id", how="left")
+    frame["prediction"] = frame["prediction"].fillna(0.5)
+    education = {"High School": 55, "Associate Degree": 65, "Bachelor’s Degree": 75, "Master’s Degree": 85, "PhD": 95}
+    performance = {"Low": 40, "Below Average": 50, "Average": 65, "High": 82, "Very High": 95}
+    frame["Talent Value"] = (frame["Education Level"].map(education).fillna(65) * 0.35 + frame["Performance Rating"].map(performance).fillna(65) * 0.45 + frame["Years at Company"].clip(0, 20) / 20 * 20).round(1)
+    return frame
 
 
-def page_intro(number: int, label: str, title: str, description: str, color: str) -> None:
-    st.markdown(f'<div class="section-heading"><span class="section-chip" style="color:{color};border-color:{color}55;background:{color}15">PAGE {number}</span><h2>{title}</h2></div><div class="muted" style="margin-bottom:1.6rem">{description}</div>', unsafe_allow_html=True)
+def page_intro(page: int, color: str, title: str, copy: str) -> None:
+    st.markdown(f'<div class="section-heading" style="--accent:{color}"><span class="chip">PAGE {page}</span><h2>{title}</h2></div><p class="section-copy" style="margin:0 8px 28px">{copy}</p>', unsafe_allow_html=True)
 
 
-def render_salary(employees: pd.DataFrame) -> None:
-    selected_id = st.selectbox("직원 선택", employees["Employee ID"], format_func=lambda value: f"EMP-{value} · {employees.loc[employees['Employee ID'].eq(value), 'Job Role'].iloc[0]} · {employees.loc[employees['Employee ID'].eq(value), 'Job Level'].iloc[0]}")
-    employee = employees.loc[employees["Employee ID"].eq(selected_id)].iloc[0]
-    risk, talent = float(employee["prediction"]), float(employee["인재 가치 지수"])
+def render_salary(df: pd.DataFrame) -> None:
+    page_intro(2, CYAN, "개별 ID 시뮬레이션", "LightGBM이 계산한 퇴사 확률과 사내 인재 가치 지수를 협상 판단에 활용합니다.")
+    labels = df.apply(lambda row: f"EMP-{row['Employee ID']} · {row['Job Role']} · {row['Job Level']}", axis=1)
+    selected = st.selectbox("직원 선택", labels, index=0)
+    row = df.iloc[labels.tolist().index(selected)]
     left, right = st.columns(2)
+    inputs = pd.DataFrame({"입력 변수": ["월 소득", "워크라이프 밸런스", "직무 만족도", "승진 횟수", "성별", "재직 기간"], "현재 값": [f"${row['Monthly Income']:,.0f}", row["Work-Life Balance"], row["Job Satisfaction"], int(row["Number of Promotions"]), row["Gender"], f"{row['Years at Company']:.0f}년"]})
+    talent = pd.DataFrame({"평가 항목": ["학력", "성과 평가", "직급", "회사 경력"], "점수": [row["Education Level"], row["Performance Rating"], row["Job Level"], f"{row['Company Tenure']:.0f}년"]})
     with left:
         with st.container(border=True):
-            st.markdown('<div class="panel-label">ATTRITION PREDICTION — INPUT VARIABLES</div>', unsafe_allow_html=True)
-            inputs = pd.DataFrame({"입력 변수": ["월 소득", "워크-라이프 밸런스", "직무 만족도", "승진 횟수", "성별", "재직 기간"], "현재 값": [f"${float(employee['Monthly Income']):,.0f}", str(employee["Work-Life Balance"]), str(employee["Job Satisfaction"]), str(employee["Number of Promotions"]), str(employee["Gender"]), f"{employee['Years at Company']}년"]})
-            st.dataframe(inputs, width="stretch", hide_index=True)
-            st.markdown('<div class="panel-label" style="color:#A78BFA;margin-top:1.4rem">TALENT VALUE — INPUT VARIABLES</div>', unsafe_allow_html=True)
-            talent_inputs = pd.DataFrame({"평가 항목": ["학력", "성과 평가", "회사 평판", "전사 기여 연수", "리더십 기회"], "점수": [employee["학력 점수"], employee["성과 점수"], employee["평판 점수"], employee["경력 점수"], employee["리더십 점수"]]})
-            st.dataframe(talent_inputs.style.format({"점수": "{:.1f}"}), width="stretch", hide_index=True)
+            st.markdown('<div class="panel-title">ATTRITION PREDICTION — INPUT VARIABLES</div>', unsafe_allow_html=True)
+            st.dataframe(inputs, hide_index=True, use_container_width=True)
+        with st.container(border=True):
+            st.markdown('<div class="panel-title" style="color:#9b7df4">TALENT VALUE — INPUT VARIABLES</div>', unsafe_allow_html=True)
+            st.dataframe(talent, hide_index=True, use_container_width=True)
+    risk = float(row["prediction"]) * 100
     with right:
-        risk_color = ROSE if risk >= .6 else AMBER if risk >= .35 else EMERALD
-        risk_text = "⚠️ 고위험 — 즉각 개입 필요" if risk >= .6 else "⚡ 중위험 — 모니터링 권고" if risk >= .35 else "✅ 저위험 — 양호"
         with st.container(border=True):
-            st.markdown('<div class="panel-label">ATTRITION RISK</div>', unsafe_allow_html=True)
-            st.markdown(f'<div style="text-align:center;color:{risk_color};font:800 4.8rem JetBrains Mono;margin:1rem 0">{risk:.1%}</div><div style="text-align:center;color:{risk_color}">{risk_text}</div>', unsafe_allow_html=True)
-            st.progress(risk)
+            note = "고위험 — 즉각 개입 필요" if risk >= 60 else "관찰 및 정기 면담"
+            st.markdown(f'<div class="panel-title">ATTRITION RISK</div><div class="big-number" style="color:{COLORS["rose"]}">{risk:.1f}%</div><div class="center-note" style="color:{COLORS["rose"]}">⚠ {note}</div>', unsafe_allow_html=True)
+            st.progress(risk / 100)
         with st.container(border=True):
-            st.markdown('<div class="panel-label" style="color:#A78BFA">TALENT VALUE INDEX</div>', unsafe_allow_html=True)
-            talent_text = "🌟 핵심 인재" if talent >= 75 else "⭐ 성장 인재" if talent >= 50 else "📌 관찰 인재"
-            st.markdown(f'<div style="text-align:center;color:{VIOLET};font:800 4.8rem JetBrains Mono;margin:1rem 0">{talent:.0f}</div><div style="text-align:center;color:{VIOLET}">{talent_text}</div>', unsafe_allow_html=True)
-            st.progress(talent / 100)
-    if risk >= .6 and talent >= 70:
-        advice = "핵심 인재이나 이탈 위험이 높습니다. 즉각적인 보상 조정 및 경력 개발 면담을 권고합니다."
-    elif risk >= .35:
-        advice = "중간 위험 구간입니다. 정기 면담으로 직무 만족도와 워라밸 원인을 확인하세요."
-    else:
-        advice = "안정적인 상태입니다. 현재 처우를 유지하되 정기 모니터링을 지속하세요."
-    st.markdown(f'<div class="decision-note"><b>💡 인사 담당자 권고</b><br>{advice}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="panel-title" style="color:#9b7df4">TALENT VALUE INDEX</div><div class="big-number" style="color:#9b7df4">{row["Talent Value"]:.0f}</div><div class="center-note" style="color:#9b7df4">⭐ 성장 인재</div>', unsafe_allow_html=True)
+            st.progress(float(row["Talent Value"]) / 100)
 
 
-def render_team(employees: pd.DataFrame) -> None:
-    roles = st.multiselect("후보 직무", sorted(employees["Job Role"].dropna().unique()), default=sorted(employees["Job Role"].dropna().unique())[:3])
-    pool = employees[employees["Job Role"].isin(roles)].copy()
-    pool["팀 적합 점수"] = (pool["인재 가치 지수"] * .6 + (1 - pool["prediction"]) * 40).round(1)
-    candidates = pool.nlargest(12, "팀 적합 점수")
-    selected = st.multiselect("팀원 선택", candidates["Employee ID"], default=candidates.head(5)["Employee ID"].tolist(), format_func=lambda value: f"EMP-{value} · {candidates.loc[candidates['Employee ID'].eq(value), 'Job Role'].iloc[0]}")
-    team = candidates[candidates["Employee ID"].isin(selected)]
+def render_team(df: pd.DataFrame) -> None:
+    page_intro(3, VIOLET, "팀원 변경 시뮬레이션", "후보 직무와 팀원을 바꾸면서 평균 퇴사 위험과 팀 적합도를 확인합니다.")
+    roles = sorted(df["Job Role"].dropna().unique())
+    picked_roles = st.multiselect("후보 직무", roles, default=roles[:3])
+    pool = df[df["Job Role"].isin(picked_roles)].copy()
+    pool["팀 적합 점수"] = (pool["Talent Value"] * 0.6 + (1 - pool["prediction"]) * 40).round(1)
+    pool = pool.nlargest(20, "팀 적합 점수")
+    labels = pool.apply(lambda row: f"EMP-{row['Employee ID']} · {row['Job Role']}", axis=1)
+    chosen = st.multiselect("팀원 선택", labels, default=labels.head(5).tolist())
+    team = pool[labels.isin(chosen)].copy()
     if team.empty:
-        st.info("팀원을 한 명 이상 선택해 주세요.")
+        st.info("한 명 이상의 팀원을 선택해 주세요.")
         return
-    with st.container(key="stat-bar-team"):
-        kpis = st.columns(4)
-        kpis[0].metric("선택된 팀", f"{len(team)}명")
-        kpis[1].metric("팀 안정도", f"{(1-team['prediction'].mean())*100:.0f}")
-        kpis[2].metric("평균 퇴사 위험", f"{team['prediction'].mean():.1%}")
-        kpis[3].metric("평균 인재 가치", f"{team['인재 가치 지수'].mean():.1f}")
-    display = team[["Employee ID", "Job Role", "Job Level", "prediction", "인재 가치 지수", "팀 적합 점수"]].rename(columns={"Employee ID": "직원", "Job Role": "직무", "Job Level": "직급", "prediction": "퇴사 위험"})
-    st.dataframe(display.style.format({"퇴사 위험": "{:.1%}", "인재 가치 지수": "{:.1f}", "팀 적합 점수": "{:.1f}"}).background_gradient(subset=["팀 적합 점수"], cmap="Purples"), width="stretch", hide_index=True)
+    values = [f"{len(team)}명", f"{team['팀 적합 점수'].mean():.0f}", f"{team['prediction'].mean()*100:.1f}%", f"{team['Talent Value'].mean():.1f}"]
+    labels_text = ["선택된 팀", "팀 안정도", "평균 퇴사 위험", "평균 인재 가치"]
+    st.markdown('<div class="metric-strip">' + "".join(f'<div><small>{label}</small><strong>{value}</strong></div>' for label, value in zip(labels_text, values, strict=True)) + "</div>", unsafe_allow_html=True)
+    table = team[["Employee ID", "Job Role", "Job Level", "prediction", "Talent Value", "팀 적합 점수"]].rename(columns={"Employee ID": "직원", "Job Role": "직무", "Job Level": "직급", "prediction": "퇴사 위험", "Talent Value": "인재 가치 지수"})
+    st.dataframe(table.style.format({"퇴사 위험": "{:.1%}", "인재 가치 지수": "{:.1f}", "팀 적합 점수": "{:.1f}"}).background_gradient(subset=["팀 적합 점수"], cmap="Purples"), hide_index=True, use_container_width=True)
 
 
-def render_people_decision(employees: pd.DataFrame) -> None:
-    role = st.selectbox("동일 조건 비교 그룹", sorted(employees["Job Role"].dropna().unique()), key="people_role")
-    group = employees[employees["Job Role"].eq(role)].copy()
-    group["복합 점수"] = (group["인재 가치 지수"] - group["prediction"] * 30).round(1)
-    group = group.sort_values("복합 점수", ascending=False).head(15)
-    group.insert(0, "순위", np.arange(1, len(group) + 1))
-    third = max(1, len(group) // 3)
-    group["판정"] = ["승진 우선" if index < third else "구조조정 검토" if index >= len(group) - third else "관찰" for index in range(len(group))]
-    display = group[["순위", "Employee ID", "Job Level", "Performance Rating", "인재 가치 지수", "prediction", "복합 점수", "판정"]].rename(columns={"Employee ID": "직원", "Job Level": "직급", "Performance Rating": "성과 평가", "prediction": "퇴사 위험"})
-    st.dataframe(display.style.format({"퇴사 위험": "{:.1%}", "인재 가치 지수": "{:.1f}", "복합 점수": "{:.1f}"}), width="stretch", hide_index=True)
-    summary = st.columns(3)
-    summary[0].metric("승진 우선 대상", f"{(group['판정']=='승진 우선').sum()}명")
-    summary[1].metric("관찰 대상", f"{(group['판정']=='관찰').sum()}명")
-    summary[2].metric("구조조정 검토", f"{(group['판정']=='구조조정 검토').sum()}명")
-    st.warning("이 결과는 면담·재배치·교육 검토를 위한 보조 정보이며 자동 불이익 결정에 사용할 수 없습니다.")
+def render_people_decision(df: pd.DataFrame) -> None:
+    page_intro(4, AMBER, "승진·발령 우선순위", "인재 가치와 잔류 가능성을 함께 반영한 복합 점수로 검토 순위를 제공합니다.")
+    role = st.selectbox("동일 조건 비교 그룹", sorted(df["Job Role"].dropna().unique()))
+    ranked = df[df["Job Role"] == role].copy()
+    ranked["복합 점수"] = (ranked["Talent Value"] - ranked["prediction"] * 30).round(1)
+    ranked = ranked.nlargest(15, "복합 점수").reset_index(drop=True)
+    ranked["순위"] = ranked.index + 1
+    ranked["판정"] = ["승진 우선" if i < 5 else "관찰" if i < 10 else "구조조정 검토" for i in ranked.index]
+    table = ranked[["순위", "Employee ID", "Job Level", "Performance Rating", "Talent Value", "prediction", "복합 점수", "판정"]].rename(columns={"Employee ID": "직원", "Job Level": "직급", "Performance Rating": "성과 평가", "Talent Value": "인재 가치 지수", "prediction": "퇴사 위험"})
+    st.dataframe(table.style.format({"인재 가치 지수": "{:.1f}", "퇴사 위험": "{:.1%}", "복합 점수": "{:.1f}"}), hide_index=True, use_container_width=True, height=390)
+    for col, label in zip(st.columns(3), ["승진 우선 대상", "관찰 대상", "구조조정 검토"], strict=True):
+        col.metric(label, f"{min(5, len(ranked))}명")
 
 
-def render_executive(employees: pd.DataFrame) -> None:
-    high = employees["prediction"].ge(.6)
-    tenure = pd.to_numeric(employees["Years at Company"], errors="coerce")
-    with st.container(key="stat-bar-overview"):
-        kpis = st.columns(4)
-        kpis[0].metric("예측 평균 퇴사율", f"{employees['prediction'].mean():.1%}")
-        kpis[1].metric("고위험 직원", f"{high.sum():,}명", f"전체의 {high.mean():.1%}", delta_color="inverse")
-        kpis[2].metric("평균 재직기간", f"{tenure.mean():.1f}년")
-        kpis[3].metric("전사 안정 지수", f"{(1-employees['prediction'].mean())*100:.1f}")
-    role_risk = employees.groupby("Job Role", as_index=False).agg(직원수=("Employee ID", "size"), 퇴사위험=("prediction", "mean")).sort_values("퇴사위험", ascending=False)
-    risk_band = pd.cut(employees["prediction"], [-.01, .35, .6, 1], labels=["저위험 (0–35%)", "중위험 (35–60%)", "고위험 (60%+)"]).value_counts(sort=False)
+def render_executive(df: pd.DataFrame) -> None:
+    page_intro(5, EMERALD, "부서별 모니터링", "고위험 인원과 직무별 평균 퇴사 위험을 확인해 선제 대응 대상을 찾습니다.")
+    risk = df["prediction"] * 100
+    values = [f"{risk.mean():.1f}%", f"{(risk >= 60).sum():,}명", f"{df['Years at Company'].mean():.1f}년", f"{100-risk.mean():.1f}"]
+    labels_text = ["예측 평균 퇴사율", "고위험 직원", "평균 재직 기간", "전사 안정 지수"]
+    st.markdown('<div class="metric-strip">' + "".join(f'<div><small>{label}</small><strong>{value}</strong></div>' for label, value in zip(labels_text, values, strict=True)) + "</div>", unsafe_allow_html=True)
+    summary = df.groupby("Job Role", as_index=False).agg(직원수=("Employee ID", "count"), 퇴사위험=("prediction", "mean")).sort_values("퇴사위험", ascending=False)
     left, right = st.columns(2)
     with left:
         with st.container(border=True):
-            st.markdown('<div class="panel-label">DEPARTMENT RISK</div><div class="panel-title">직무별 평균 퇴사 위험도</div>', unsafe_allow_html=True)
-            colors = [ROSE if value >= .6 else AMBER if value >= .35 else EMERALD for value in role_risk["퇴사위험"]]
-            fig = go.Figure(go.Bar(x=role_risk["퇴사위험"], y=role_risk["Job Role"], orientation="h", marker_color=colors))
-            style_plotly_chart(fig, 300).update_xaxes(tickformat=".0%")
-            st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
+            st.markdown('<div class="panel-title">DEPARTMENT RISK</div><h3>직무별 평균 퇴사 위험도</h3>', unsafe_allow_html=True)
+            fig = go.Figure(go.Bar(x=summary["퇴사위험"] * 100, y=summary["Job Role"], orientation="h", marker_color=AMBER))
+            fig.update_layout(yaxis={"categoryorder": "total ascending"})
+            st.plotly_chart(style_plotly_chart(fig, 270), use_container_width=True)
     with right:
         with st.container(border=True):
-            st.markdown('<div class="panel-label" style="color:#F59E0B">RISK DISTRIBUTION</div><div class="panel-title">위험 구간별 직원 분포</div>', unsafe_allow_html=True)
-            fig = go.Figure(go.Pie(labels=risk_band.index.astype(str), values=risk_band.values, hole=.58, marker_colors=[EMERALD, AMBER, ROSE]))
-            style_plotly_chart(fig, 300)
-            st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
-    st.markdown('<div class="panel-label" style="color:#FB7185;margin-top:1.5rem">⚠ IMMEDIATE INTERVENTION</div><div class="panel-title">즉각 개입 권고 직무</div>', unsafe_allow_html=True)
-    alert = role_risk[role_risk["퇴사위험"].ge(.35)].copy()
-    alert["조치"] = np.where(alert["퇴사위험"].ge(.6), "즉각 개입 필요", "모니터링 강화")
-    st.dataframe(alert.style.format({"퇴사위험": "{:.1%}"}), width="stretch", hide_index=True)
+            st.markdown('<div class="panel-title" style="color:#ffa20a">RISK DISTRIBUTION</div><h3>위험 구간별 직원 분포</h3>', unsafe_allow_html=True)
+            bands = pd.cut(risk, [-1, 35, 60, 101], labels=["저위험 (0~35%)", "중위험 (35~60%)", "고위험 (60%+)"]).value_counts()
+            fig = go.Figure(go.Pie(labels=bands.index, values=bands.values, hole=.55, marker_colors=[EMERALD, AMBER, COLORS["rose"]]))
+            st.plotly_chart(style_plotly_chart(fig, 270), use_container_width=True)
+    st.markdown('<div class="panel-title" style="color:#ff6b86;margin-top:22px">⚠ IMMEDIATE INTERVENTION</div><h3>즉각 개입 권고 직무</h3>', unsafe_allow_html=True)
+    alert = summary.head(8).copy()
+    alert["퇴사위험"] *= 100
+    alert["조치"] = "모니터링 강화"
+    st.dataframe(alert.style.format({"퇴사위험": "{:.1f}%"}), hide_index=True, use_container_width=True)
