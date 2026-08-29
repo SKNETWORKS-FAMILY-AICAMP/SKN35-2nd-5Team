@@ -52,9 +52,6 @@ def get_raw_data(data_type):
 
         rows = cursor.fetchall()
 
-        print(len(rows))
-        print(rows[0])
-
         return rows
 
     except Exception:
@@ -87,9 +84,6 @@ def get_processed_data(data_type):
         cursor.execute(query, (data_type,))
 
         rows = cursor.fetchall()
-
-        print(len(rows))
-        print(rows[0])
 
         return rows
 
