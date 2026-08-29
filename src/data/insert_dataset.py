@@ -44,9 +44,19 @@ def insert_employee_attrition_predictions() -> int:
     cursor = None
     try:
         cursor = connection.cursor()
-        cursor.executemany(INSERT_PREDICTION_SQL, rows)
+        cursor.execute("DELETE FROM employee_attrition_prediction")
+        cursor.executemany(
+            """
+            INSERT INTO employee_attrition_prediction (
+                employee_id,
+                prediction
+            )
+            VALUES (%s, %s)
+            """,
+            rows,
+        )
         connection.commit()
-        return cursor.rowcount
+        return len(rows)
     except Exception:
         connection.rollback()
         raise

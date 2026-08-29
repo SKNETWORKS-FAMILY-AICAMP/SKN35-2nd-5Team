@@ -68,12 +68,24 @@ def _metric_cards(items: list[tuple[str, str, str, str]]) -> None:
 
 
 def render_salary(df: pd.DataFrame) -> None:
+    st.caption("직원 선택")
     labels = df.apply(lambda r: f"EMP-{r['Employee ID']} — {r['Job Role']}", axis=1).tolist()
-    selected = st.selectbox("직원 선택", labels, label_visibility="visible")
+    
+    # 윗줄 셀렉트 + 아랫줄 부서/직급 일체형 카드
+    selected = st.selectbox("직원 ID", labels, label_visibility="collapsed")
     row = df.iloc[labels.index(selected)]
     risk = float(row["prediction"]) * 100
     color = _risk_color(risk)
-    st.markdown(f'<div class="employee-strip"><div><span>부서</span><b>{escape(str(row["Job Role"]))}</b></div><div><span>직급</span><b>{escape(str(row["Job Level"]))}</b></div></div>', unsafe_allow_html=True)
+    
+    st.markdown(
+        f'''<div class="employee-strip" style="margin-top:-8px">
+            <div class="employee-strip-bottom">
+                <div><span>부서</span><b>{escape(str(row["Job Role"]))}</b></div>
+                <div><span>직급</span><b>{escape(str(row["Job Level"]))}</b></div>
+            </div>
+        </div>''',
+        unsafe_allow_html=True,
+    )
 
     features = _feature_scores(row)
     left, center, right = st.columns([.72, 2.05, 2.05], gap="small")
@@ -103,31 +115,44 @@ def render_salary(df: pd.DataFrame) -> None:
 
 
 def render_team(df: pd.DataFrame) -> None:
-    roles = sorted(df["Job Role"].dropna().unique())
-    project_names = ["AI 추천 엔진 고도화", "고객 데이터 플랫폼 구축", "보안 인프라 강화", "차세대 UX 리뉴얼"]
-    project = st.segmented_control("프로젝트 선택", project_names, default=project_names[0])
-    project_index = project_names.index(project or project_names[0])
-    role_window = [roles[(project_index + i) % len(roles)] for i in range(min(3, len(roles)))]
-    pool = df[df["Job Role"].isin(role_window)].copy()
+    st.caption("프로젝트 선택")
+    projects_map = {
+        "AI·기술 혁신 TF (Technology)": "Technology",
+        "재무·비즈니스 전략 TF (Finance)": "Finance",
+        "디지털 헬스케어 TF (Healthcare)": "Healthcare",
+        "미디어·브랜드 TF (Media)": "Media",
+        "인재육성·교육 TF (Education)": "Education",
+    }
+    project_names = list(projects_map.keys())
+    project = st.segmented_control("프로젝트 선택", project_names, default=project_names[0], label_visibility="collapsed")
+    selected_project = project or project_names[0]
+    target_role = projects_map[selected_project]
+
+    pool = df[df["Job Role"] == target_role].copy()
     pool["팀 적합 점수"] = (pool["Talent Value"] * .6 + (1 - pool["prediction"]) * 40).round(1)
-    pool = pool.nlargest(20, "팀 적합 점수")
-    label_map = {f"EMP-{r['Employee ID']} · {r['Job Role']}": r["Employee ID"] for _, r in pool.iterrows()}
-    choices = list(label_map)
+    team = pool.nlargest(5, "팀 적합 점수").copy()
+    if team.empty:
+        st.info("선택된 부문에 해당하는 직원이 없습니다.")
+        return
+
     left, right = st.columns([1, 4.2], gap="small")
     with left:
         st.caption("프로젝트 정보")
-        priority = ["HIGH", "MEDIUM", "CRITICAL", "MEDIUM"][project_index]
-        st.markdown(f'<div class="glass-card project-card"><div><b>{project}</b><span class="priority">{priority}</span></div><p><span>마감일</span><b>2026-09-{30-project_index*3:02d}</b></p><p><span>팀 구성</span><b>최대 7명</b></p></div>', unsafe_allow_html=True)
-        st.caption("현재 팀원")
-        chosen = st.multiselect("팀원 교체", choices, default=choices[:5], max_selections=7, label_visibility="collapsed")
-        team = pool[pool["Employee ID"].isin([label_map[x] for x in chosen])].copy()
-        if team.empty:
-            st.info("한 명 이상의 팀원을 선택해 주세요.")
-            return
+        st.markdown(
+            f'''<div class="glass-card project-card">
+            <div><b>{escape(selected_project.split(" (")[0])}</b><span class="priority">HIGH</span></div>
+            <p><span>대상 부문</span><b>{escape(target_role)}</b></p>
+            <p><span>선별 기준</span><b>인재가치 60% + 안정성 40%</b></p>
+            <p><span>추천 규모</span><b>정예 5명 (최적 인재)</b></p>
+            </div>''',
+            unsafe_allow_html=True,
+        )
+        st.caption(f"{target_role} 최적 추천 팀원")
         people = []
         for _, r in team.iterrows():
             risk = float(r["prediction"]) * 100
-            people.append(f'<div class="member-row"><i>{str(r["Employee ID"])[-2:]}</i><div><b>EMP-{r["Employee ID"]}</b><span>{escape(str(r["Job Role"]))}</span></div><strong style="color:{_risk_color(risk)}">{risk:.0f}%<small>위험</small></strong><em>교체</em></div>')
+            score = float(r["팀 적합 점수"])
+            people.append(f'<div class="member-row"><i>{str(r["Employee ID"])[-2:]}</i><div><b>EMP-{r["Employee ID"]}</b><span>{escape(str(r["Job Role"]))} · {escape(str(r["Job Level"]))}</span></div><strong style="color:{_risk_color(risk)}">{risk:.0f}%<small>위험</small></strong><em style="color:var(--blue);font-weight:600;font-size:10px">{score:.0f}점</em></div>')
         st.markdown('<div class="glass-card member-list">' + "".join(people) + "</div>", unsafe_allow_html=True)
     avg_risk, avg_talent = team["prediction"].mean() * 100, team["Talent Value"].mean()
     with right:
@@ -140,11 +165,17 @@ def render_team(df: pd.DataFrame) -> None:
         fig.update_layout(barmode="group", yaxis=dict(range=[0, 100]))
         with st.container(border=True):
             st.plotly_chart(style_plotly_chart(fig, 280), width="stretch", config={"displayModeBar": False})
-        st.markdown(f'<div class="team-warning">팀 평균 이탈위험도 <b>{avg_risk:.0f}%</b> — 고위험 팀원이 다수 포함되어 있습니다. 위 팀원 선택에서 구성을 최적화하세요.</div>', unsafe_allow_html=True)
+        status_note = "고위험 팀원이 포함되어 있어 모니터링이 필요합니다." if avg_risk >= 35 else "안정적인 팀 인재 구성입니다."
+        st.markdown(f'<div class="team-warning">팀 평균 이탈위험도 <b>{avg_risk:.0f}%</b> — <b>{target_role}</b> 소속 직원 중 인재가치와 MLP 이탈안정성이 가장 우수한 정예 5명의 분석 결과입니다. ({status_note})</div>', unsafe_allow_html=True)
 
 
 def render_people_decision(df: pd.DataFrame) -> None:
-    choice = st.segmented_control("위험 필터", ["전체", "안전", "위험"], default="전체")
+    filter_col, formula_col = st.columns([1.1, 2.5], gap="small")
+    with filter_col:
+        choice = st.segmented_control("위험 필터", ["전체", "안전", "위험"], default="전체", label_visibility="collapsed")
+    with formula_col:
+        st.markdown('<div class="formula-inline"><b>안정 인재가치</b> = 인재가치 × (1 − 이탈위험도)</div>', unsafe_allow_html=True)
+
     ranked = df.copy()
     ranked["안정점수"] = (ranked["Talent Value"] * (1 - ranked["prediction"])).round(1)
     if choice == "안전":
@@ -152,7 +183,6 @@ def render_people_decision(df: pd.DataFrame) -> None:
     elif choice == "위험":
         ranked = ranked[ranked["prediction"] >= .60]
     ranked = ranked.nlargest(12, "안정점수").reset_index(drop=True)
-    st.markdown('<div class="formula"><b>안정 인재가치</b> = 인재가치 × (1 − 이탈위험도)</div>', unsafe_allow_html=True)
     rows = []
     for i, r in ranked.iterrows():
         risk, talent, stable = float(r["prediction"]) * 100, float(r["Talent Value"]), float(r["안정점수"])
