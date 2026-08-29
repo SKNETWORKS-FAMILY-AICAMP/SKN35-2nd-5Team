@@ -37,15 +37,33 @@ def render_salary(df: pd.DataFrame) -> None:
     selected = st.selectbox("직원 선택", labels, index=0)
     row = df.iloc[labels.tolist().index(selected)]
     left, right = st.columns(2)
-    inputs = pd.DataFrame({"입력 변수": ["월 소득", "워크라이프 밸런스", "직무 만족도", "승진 횟수", "성별", "재직 기간"], "현재 값": [f"${row['Monthly Income']:,.0f}", row["Work-Life Balance"], row["Job Satisfaction"], int(row["Number of Promotions"]), row["Gender"], f"{row['Years at Company']:.0f}년"]})
-    talent = pd.DataFrame({"평가 항목": ["학력", "성과 평가", "직급", "회사 경력"], "점수": [row["Education Level"], row["Performance Rating"], row["Job Level"], f"{row['Company Tenure']:.0f}년"]})
+    inputs = pd.DataFrame({
+        "입력 변수": ["월 소득", "워크라이프 밸런스", "직무 만족도", "승진 횟수", "성별", "재직 기간"],
+        "현재 값": [
+            f"${row['Monthly Income']:,.0f}",
+            str(row["Work-Life Balance"]),
+            str(row["Job Satisfaction"]),
+            f"{int(row['Number of Promotions'])}회",
+            str(row["Gender"]),
+            f"{row['Years at Company']:.0f}년",
+        ],
+    })
+    talent = pd.DataFrame({
+        "평가 항목": ["학력", "성과 평가", "직급", "회사 경력"],
+        "점수": [
+            str(row["Education Level"]),
+            str(row["Performance Rating"]),
+            str(row["Job Level"]),
+            f"{row['Company Tenure']:.0f}년",
+        ],
+    })
     with left:
         with st.container(border=True):
             st.markdown('<div class="panel-title">ATTRITION PREDICTION — INPUT VARIABLES</div>', unsafe_allow_html=True)
-            st.dataframe(inputs, hide_index=True, use_container_width=True)
+            st.dataframe(inputs, hide_index=True, width="stretch")
         with st.container(border=True):
             st.markdown('<div class="panel-title" style="color:#9b7df4">TALENT VALUE — INPUT VARIABLES</div>', unsafe_allow_html=True)
-            st.dataframe(talent, hide_index=True, use_container_width=True)
+            st.dataframe(talent, hide_index=True, width="stretch")
     risk = float(row["prediction"]) * 100
     with right:
         with st.container(border=True):
@@ -74,7 +92,7 @@ def render_team(df: pd.DataFrame) -> None:
     labels_text = ["선택된 팀", "팀 안정도", "평균 퇴사 위험", "평균 인재 가치"]
     st.markdown('<div class="metric-strip">' + "".join(f'<div><small>{label}</small><strong>{value}</strong></div>' for label, value in zip(labels_text, values, strict=True)) + "</div>", unsafe_allow_html=True)
     table = team[["Employee ID", "Job Role", "Job Level", "prediction", "Talent Value", "팀 적합 점수"]].rename(columns={"Employee ID": "직원", "Job Role": "직무", "Job Level": "직급", "prediction": "퇴사 위험", "Talent Value": "인재 가치 지수"})
-    st.dataframe(table.style.format({"퇴사 위험": "{:.1%}", "인재 가치 지수": "{:.1f}", "팀 적합 점수": "{:.1f}"}).background_gradient(subset=["팀 적합 점수"], cmap="Purples"), hide_index=True, use_container_width=True)
+    st.dataframe(table.style.format({"퇴사 위험": "{:.1%}", "인재 가치 지수": "{:.1f}", "팀 적합 점수": "{:.1f}"}).background_gradient(subset=["팀 적합 점수"], cmap="Purples"), hide_index=True, width="stretch")
 
 
 def render_people_decision(df: pd.DataFrame) -> None:
@@ -86,7 +104,7 @@ def render_people_decision(df: pd.DataFrame) -> None:
     ranked["순위"] = ranked.index + 1
     ranked["판정"] = ["승진 우선" if i < 5 else "관찰" if i < 10 else "구조조정 검토" for i in ranked.index]
     table = ranked[["순위", "Employee ID", "Job Level", "Performance Rating", "Talent Value", "prediction", "복합 점수", "판정"]].rename(columns={"Employee ID": "직원", "Job Level": "직급", "Performance Rating": "성과 평가", "Talent Value": "인재 가치 지수", "prediction": "퇴사 위험"})
-    st.dataframe(table.style.format({"인재 가치 지수": "{:.1f}", "퇴사 위험": "{:.1%}", "복합 점수": "{:.1f}"}), hide_index=True, use_container_width=True, height=390)
+    st.dataframe(table.style.format({"인재 가치 지수": "{:.1f}", "퇴사 위험": "{:.1%}", "복합 점수": "{:.1f}"}), hide_index=True, width="stretch", height=390)
     for col, label in zip(st.columns(3), ["승진 우선 대상", "관찰 대상", "구조조정 검토"], strict=True):
         col.metric(label, f"{min(5, len(ranked))}명")
 
@@ -104,15 +122,15 @@ def render_executive(df: pd.DataFrame) -> None:
             st.markdown('<div class="panel-title">DEPARTMENT RISK</div><h3>직무별 평균 퇴사 위험도</h3>', unsafe_allow_html=True)
             fig = go.Figure(go.Bar(x=summary["퇴사위험"] * 100, y=summary["Job Role"], orientation="h", marker_color=AMBER))
             fig.update_layout(yaxis={"categoryorder": "total ascending"})
-            st.plotly_chart(style_plotly_chart(fig, 270), use_container_width=True)
+            st.plotly_chart(style_plotly_chart(fig, 270), width="stretch")
     with right:
         with st.container(border=True):
             st.markdown('<div class="panel-title" style="color:#ffa20a">RISK DISTRIBUTION</div><h3>위험 구간별 직원 분포</h3>', unsafe_allow_html=True)
             bands = pd.cut(risk, [-1, 35, 60, 101], labels=["저위험 (0~35%)", "중위험 (35~60%)", "고위험 (60%+)"]).value_counts()
             fig = go.Figure(go.Pie(labels=bands.index, values=bands.values, hole=.55, marker_colors=[EMERALD, AMBER, COLORS["rose"]]))
-            st.plotly_chart(style_plotly_chart(fig, 270), use_container_width=True)
+            st.plotly_chart(style_plotly_chart(fig, 270), width="stretch")
     st.markdown('<div class="panel-title" style="color:#ff6b86;margin-top:22px">⚠ IMMEDIATE INTERVENTION</div><h3>즉각 개입 권고 직무</h3>', unsafe_allow_html=True)
     alert = summary.head(8).copy()
     alert["퇴사위험"] *= 100
     alert["조치"] = "모니터링 강화"
-    st.dataframe(alert.style.format({"퇴사위험": "{:.1f}%"}), hide_index=True, use_container_width=True)
+    st.dataframe(alert.style.format({"퇴사위험": "{:.1f}%"}), hide_index=True, width="stretch")
