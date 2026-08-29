@@ -1,5 +1,8 @@
+"""앱 진입 시 Page 1 관리자 역할 선택 화면으로 이동한다."""
+
 import streamlit as st
 
+<<<<<<< Updated upstream
 from src.analysis.eda import build_eda_report
 from src.load_data.loader import load_train_data
 
@@ -34,3 +37,7 @@ st.markdown(
 """
 )
 st.info("왼쪽 사이드바에서 분석 단계를 선택하세요. 학습 결과는 artifacts/에 저장됩니다.")
+=======
+st.set_page_config(page_title="TalentGuard AI", layout="wide")
+st.switch_page("pages/page01.py")
+>>>>>>> Stashed changes
