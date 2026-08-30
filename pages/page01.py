@@ -37,7 +37,7 @@ total_count, recall, roc_auc = get_home_stats()
 st.markdown(
     f"""
     <section class="start-hero"><div class="start-inner">
-      <div class="start-badge">● TalentShield · 인트라넷 시스템 v2.4</div>
+      
       <h1>기업의 인재를<br><span>지켜드립니다.</span></h1>
       <p class="start-desc">핵심 기술 인재의 이탈 신호를 사전에 감지하고,<br>데이터 기반의 선제적 인사 전략을 제공합니다.</p>
       <div class="start-actions">
