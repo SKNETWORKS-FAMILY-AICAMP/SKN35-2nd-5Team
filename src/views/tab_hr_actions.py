@@ -25,6 +25,7 @@ from src.utils.hr_metrics import (
     add_people_decision_scores,
     department_options,
     level_options,
+    risk_label,
     translate,
 )
 from streamlit_ui import alert_box, section_heading, sub_tabs
@@ -53,7 +54,7 @@ def _employee_filter(employees: pd.DataFrame, key_prefix: str) -> tuple[str, str
     None이면 "전체"(필터 없음)라는 뜻이다.
     """
 
-    col_dept, col_level, col_id, col_search = st.columns([1.1, 1, 1.1, 1.4])
+    col_dept, col_level, col_id, col_search, col_reset = st.columns([1, 0.85, 0.95, 1.2, 0.6])
 
     dept_options = department_options(employees)
     with col_dept:
@@ -86,6 +87,18 @@ def _employee_filter(employees: pd.DataFrame, key_prefix: str) -> tuple[str, str
         search_text = st.text_input(
             "직원 ID로 바로 찾기", key=f"{key_prefix}_direct_search", placeholder="예: 10345"
         )
+
+    with col_reset:
+        st.markdown("<div style='height:1.9rem'></div>", unsafe_allow_html=True)
+        if st.button("초기화", key=f"{key_prefix}_filter_reset", width="stretch", help="검색 조건을 초기값으로 되돌려요"):
+            for reset_key in (
+                f"{key_prefix}_dept",
+                f"{key_prefix}_level",
+                f"{key_prefix}_id",
+                f"{key_prefix}_direct_search",
+            ):
+                st.session_state.pop(reset_key, None)
+            st.rerun()
 
     search_id = None
     if search_text.strip():
@@ -143,15 +156,23 @@ def _ranked_table(
         if text_col in table.columns:
             table[text_col] = table[text_col].map(translate)
 
+    # 캔버스로 그려지는 st.dataframe의 ProgressColumn은 커스텀 CSS(Liquid Glass 테마)를
+    # 전혀 반영하지 못해 페이지 톤과 어울리지 않는다. 대신 깔끔한 숫자 포맷과, 한눈에
+    # 위험 수준을 읽을 수 있는 "위험도" 텍스트 배지 컬럼으로 대체한다.
+    if "퇴사 예측률" in table.columns:
+        risk_insert_at = table.columns.get_loc("퇴사 예측률") + 1
+        table.insert(risk_insert_at, "위험도", page_rows["prediction"].map(risk_label).values)
+
     column_config = {
         "순위": st.column_config.NumberColumn(width="small"),
         "직원 ID": st.column_config.NumberColumn(width="small", format="%d"),
         "직급": st.column_config.TextColumn(width="small"),
-        "인재 가치 지수": st.column_config.ProgressColumn(min_value=0, max_value=100, format="%.1f"),
-        "퇴사 예측률": st.column_config.ProgressColumn(min_value=0, max_value=1, format="percent"),
+        "인재 가치 지수": st.column_config.NumberColumn(width="small", format="%.1f"),
+        "퇴사 예측률": st.column_config.NumberColumn(width="small", format="percent"),
+        "위험도": st.column_config.TextColumn(width="small"),
     }
     score_label = rename.get(score_col, score_col)
-    column_config[score_label] = st.column_config.ProgressColumn(min_value=0, max_value=100, format="%.1f")
+    column_config[score_label] = st.column_config.NumberColumn(width="small", format="%.1f")
 
     # 체크박스 없이 셀을 클릭하는 것만으로 행을 선택하도록 single-cell 모드를 쓴다
     # (single-row/multi-row는 왼쪽에 체크박스 열이 항상 붙는다).
@@ -211,7 +232,7 @@ def _pagination_controls(key_suffix: str, total_pages: int) -> int:
     return st.session_state[page_key]
 
 
-@st.dialog("직원 상세 지표 (레이더 차트)", width="medium")
+@st.dialog("Employee Intelligence · 역량 레이더", width="medium")
 def _radar_dialog(employee_id: int, group: pd.DataFrame) -> None:
     """그리드에서 선택한 행의, 표에는 없는 부가 지표를 레이더 차트 모달로 보여준다."""
 
@@ -236,8 +257,8 @@ def _radar_dialog(employee_id: int, group: pd.DataFrame) -> None:
             r=values + [values[0]],
             theta=categories + [categories[0]],
             fill="toself",
-            line={"color": "#3182F6"},
-            fillcolor="rgba(49, 130, 246, 0.25)",
+            line={"color": "#0071E3"},
+            fillcolor="rgba(0, 113, 227, 0.25)",
             name=f"ID {employee_id}",
         )
     )
@@ -254,7 +275,8 @@ def _radar_dialog(employee_id: int, group: pd.DataFrame) -> None:
 def render(employees: pd.DataFrame) -> None:
     section_heading(
         "03 · PEOPLE DECISIONS",
-        "인사발령 · 승진 · 구조조정",
+        "HR Actions",
+        "Make every people decision with context. "
         "인재 가치와 퇴사 위험을 같은 기준으로 계산하되, 최종 판단은 인사 담당자가 수행합니다.",
     )
 
@@ -275,9 +297,9 @@ def render(employees: pd.DataFrame) -> None:
 
     active = sub_tabs(
         [
-            ("promotion", "승진 우선순위"),
-            ("restructuring", "구조조정 검토"),
-            ("reassignment", "재배치 · 인사발령 후보"),
+            ("promotion", "Promotion · 승진"),
+            ("restructuring", "Restructuring · 구조조정"),
+            ("reassignment", "Relocation · 재배치"),
         ],
         state_key="hr_actions_tab",
     )

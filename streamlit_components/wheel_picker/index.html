@@ -3,31 +3,31 @@
 <head>
   <meta charset="utf-8">
   <style>
-    /* 이 프로젝트의 토스 스타일 팔레트(streamlit_ui.py의 :root 변수)와 맞춘 값.
+    /* 이 프로젝트의 애플 스토어 톤(streamlit_ui.py의 :root 변수)과 맞춘 값.
        이 파일은 별도 iframe(컴포넌트)이라 CSS 변수를 공유할 수 없어 값을 그대로 복사했다. */
     * { box-sizing: border-box; }
-    html, body { margin: 0; background: transparent; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
-    .label { margin: 0 0 8px 3px; color: #4E5968; font-size: 14px; font-weight: 650; }
+    html, body { margin: 0; background: transparent; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif; }
+    .label { margin: 0 0 8px 3px; color: #6E6E73; font-size: 14px; font-weight: 650; }
     .value-button {
-      width: 100%; height: 40px; padding: 0 14px; border: 1px solid #EDEFF2;
-      border-radius: 11px; background: #FFFFFF; color: #191F28; font-size: 16px;
+      width: 100%; height: 40px; padding: 0 14px; border: 1px solid #D2D2D7;
+      border-radius: 12px; background: #FFFFFF; color: #1D1D1F; font-size: 16px;
       text-align: left; cursor: pointer; transition: border-color .16s ease, background .16s ease;
     }
     .value-button:hover {
-      border-color: #3182F6;
-      background: #EAF2FF;
+      border-color: #0071E3;
+      background: #EDF6FF;
     }
-    .value-button::after { content: "⌄"; float: right; color: #8B95A1; font-size: 19px; }
+    .value-button::after { content: "⌄"; float: right; color: #86868B; font-size: 19px; }
     .wheel-wrap {
-      position: relative; height: 156px; overflow: hidden; border: 1px solid #EDEFF2;
-      border-radius: 18px; background: #FFFFFF;
-      box-shadow: 0 12px 28px rgba(25, 31, 40, .08);
+      position: relative; height: 156px; overflow: hidden; border: 1px solid #D2D2D7;
+      border-radius: 20px; background: #FFFFFF;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, .08);
     }
     .hidden { display: none; }
     .wheel-wrap::before {
       content: ""; position: absolute; z-index: 2; left: 10px; right: 10px; top: 52px;
-      height: 52px; border-radius: 13px; background: #EAF2FF;
-      border: 1px solid #3182F6; pointer-events: none;
+      height: 52px; border-radius: 14px; background: #EDF6FF;
+      border: 1px solid #0071E3; pointer-events: none;
     }
     .wheel-wrap::after {
       content: ""; position: absolute; z-index: 3; inset: 0; pointer-events: none;
@@ -38,10 +38,10 @@
     .spacer, .item { height: 52px; flex: none; }
     .item {
       position: relative; z-index: 4; display: flex; align-items: center; justify-content: center;
-      scroll-snap-align: center; color: #8B95A1; font-size: 20px; cursor: pointer;
+      scroll-snap-align: center; color: #86868B; font-size: 20px; cursor: pointer;
       transition: color .16s ease, font-size .16s ease, font-weight .16s ease;
     }
-    .item.selected { color: #1B64DA; font-size: 27px; font-weight: 750; }
+    .item.selected { color: #0058C7; font-size: 27px; font-weight: 600; }
   </style>
 </head>
 <body>

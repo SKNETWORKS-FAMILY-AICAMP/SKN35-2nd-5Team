@@ -15,7 +15,15 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from streamlit_ui import alert_box, hbar_chart, render_table, section_heading, stat_cards, sub_tabs
+from streamlit_ui import (
+    alert_box,
+    model_card_grid,
+    render_table,
+    section_heading,
+    stat_cards,
+    sub_tabs,
+    versus_hero,
+)
 
 REPORTS_DIR = Path("artifacts/reports")
 ML_LEADERBOARD_PATH = REPORTS_DIR / "ml_leaderboard.csv"
@@ -49,6 +57,25 @@ METRIC_LABELS = {
 def _load_csv(path: str, modified_time: float) -> pd.DataFrame:
     del modified_time
     return pd.read_csv(path)
+
+
+def _hex_to_rgba(hex_color: str, alpha: float) -> str:
+    """레이더 차트의 채우기 색을 선 색상과 맞추기 위한 hex → rgba 변환."""
+
+    hex_color = hex_color.lstrip("#")
+    r, g, b = (int(hex_color[i : i + 2], 16) for i in (0, 2, 4))
+    return f"rgba({r}, {g}, {b}, {alpha})"
+
+
+def _plotly_font() -> dict:
+    return {"family": "-apple-system, BlinkMacSystemFont, sans-serif", "color": "#1D1D1F"}
+
+
+def _chart_type_picker(label: str, options: list[str], key: str) -> str:
+    """지표를 원하는 그래프 형태로 바꿔볼 수 있는 세그먼트 선택기."""
+
+    choice = st.segmented_control(label, options, key=key, default=options[0])
+    return choice or st.session_state.get(key) or options[0]
 
 
 def _render_ml_comparison() -> None:
@@ -88,55 +115,134 @@ def _render_ml_comparison() -> None:
 
     st.markdown("**한눈에 보는 성능**")
     best_per_metric = {m: display[m].max() for m in metric_columns}
-    render_table(
-        display,
-        formats={c: "{:.4f}" for c in metric_columns},
-        badges={
-            m: (lambda v, m=m: (f"{v:.4f}", "safe" if v == best_per_metric[m] else "neutral"))
-            for m in metric_columns
-        },
-    )
+    model_cards = [
+        {
+            "name": f"{row['모델']} · {row['버전']}",
+            "metrics": [(m, f"{row[m]:.4f}") for m in metric_columns],
+            "best": index == 0,
+        }
+        for index, (_, row) in enumerate(display.iterrows())
+    ]
+    model_card_grid(model_cards)
+    with st.expander("모델별 상세 지표 표 보기"):
+        render_table(
+            display,
+            formats={c: "{:.4f}" for c in metric_columns},
+            badges={
+                m: (lambda v, m=m: (f"{v:.4f}", "safe" if v == best_per_metric[m] else "neutral"))
+                for m in metric_columns
+            },
+        )
 
     st.markdown("**핵심 지표 비교**")
     chart_metrics = ["정확도", "F1 점수", "ROC 곡선 면적", "정밀도-재현율 곡선 면적"]
-    chart = go.Figure()
-    colors = ["#3182F6", "#1B64DA", "#00C2FF", "#4E5968", "#8B95A1"]
-    for (_, row), color in zip(display.iterrows(), colors, strict=False):
-        model_label = f"{row['모델']} · {row['버전']}"
-        values = [float(row[m]) for m in chart_metrics]
-        chart.add_trace(
-            go.Scatter(
-                x=chart_metrics,
-                y=values,
-                name=model_label,
-                mode="lines+markers+text",
-                text=[f"{v:.4f}" for v in values],
-                textposition="top center",
-                line={"color": color, "width": 4, "shape": "spline"},
-                marker={"color": "white", "line": {"color": color, "width": 3}, "size": 11},
-                hovertemplate=f"<b>{model_label}</b><br>%{{x}}: %{{y:.4f}}<extra></extra>",
-            )
-        )
+    colors = ["#0071E3", "#5E5CE6", "#32ADE6", "#6E6E73", "#98989D"]
+    series = [
+        (f"{row['모델']} · {row['버전']}", [float(row[m]) for m in chart_metrics], color)
+        for (_, row), color in zip(display.iterrows(), colors, strict=False)
+    ]
     all_values = display[chart_metrics].astype(float).to_numpy().ravel()
     y_min = max(0.0, float(all_values.min()) - 0.03)
-    y_max = min(1.0, float(all_values.max()) + 0.03)
-    chart.update_layout(
-        height=440,
-        margin={"l": 20, "r": 20, "t": 35, "b": 20},
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(255,255,255,0.9)",
-        font={"family": "Inter, sans-serif", "color": "#191F28"},
-        hovermode="x unified",
-        legend={"orientation": "h", "yanchor": "bottom", "y": 1.08, "xanchor": "left", "x": 0},
-        xaxis={"title": None, "showgrid": False},
-        yaxis={
-            "title": "평가 점수",
-            "range": [y_min, y_max],
-            "tickformat": ".2f",
-            "gridcolor": "#E5E8EB",
-            "zeroline": False,
-        },
+    y_max_line = min(1.0, float(all_values.max()) + 0.03)
+    y_max_bar = min(1.08, float(all_values.max()) + 0.09)
+
+    ml_chart_type = _chart_type_picker(
+        "그래프 종류", ["막대 그래프", "레이더 차트", "라인 차트"], key="model_ml_chart_type"
     )
+
+    chart = go.Figure()
+    if ml_chart_type == "레이더 차트":
+        # 모델이 4~5개라 겹쳐 채우면 지저분해지므로, 선만 겹쳐 각 모델의 지표
+        # 프로필 모양을 비교한다.
+        for label, values, color in series:
+            chart.add_trace(
+                go.Scatterpolar(
+                    r=values + [values[0]],
+                    theta=chart_metrics + [chart_metrics[0]],
+                    name=label,
+                    line={"color": color, "width": 2.5},
+                    marker={"size": 5, "color": color},
+                    hovertemplate=f"<b>{label}</b><br>%{{theta}}: %{{r:.4f}}<extra></extra>",
+                )
+            )
+        chart.update_layout(
+            polar={
+                "radialaxis": {"visible": True, "range": [y_min, y_max_line], "gridcolor": "#E8E8ED"},
+                "angularaxis": {"gridcolor": "#E8E8ED"},
+                "bgcolor": "rgba(255,255,255,0.6)",
+            },
+            height=460,
+            showlegend=True,
+            legend={"orientation": "h", "yanchor": "bottom", "y": 1.1, "xanchor": "center", "x": 0.5},
+            margin={"l": 50, "r": 50, "t": 30, "b": 30},
+            paper_bgcolor="rgba(0,0,0,0)",
+            font=_plotly_font(),
+        )
+    elif ml_chart_type == "라인 차트":
+        for label, values, color in series:
+            chart.add_trace(
+                go.Scatter(
+                    x=chart_metrics,
+                    y=values,
+                    name=label,
+                    mode="lines+markers+text",
+                    text=[f"{v:.4f}" for v in values],
+                    textposition="top center",
+                    line={"color": color, "width": 4, "shape": "spline"},
+                    marker={"color": "white", "line": {"color": color, "width": 3}, "size": 11},
+                    hovertemplate=f"<b>{label}</b><br>%{{x}}: %{{y:.4f}}<extra></extra>",
+                )
+            )
+        chart.update_layout(
+            height=440,
+            margin={"l": 20, "r": 20, "t": 35, "b": 20},
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(255,255,255,0.9)",
+            font=_plotly_font(),
+            hovermode="x unified",
+            legend={"orientation": "h", "yanchor": "bottom", "y": 1.08, "xanchor": "left", "x": 0},
+            xaxis={"title": None, "showgrid": False},
+            yaxis={
+                "title": "평가 점수",
+                "range": [y_min, y_max_line],
+                "tickformat": ".2f",
+                "gridcolor": "#E8E8ED",
+                "zeroline": False,
+            },
+        )
+    else:  # 막대 그래프 (기본)
+        for label, values, color in series:
+            chart.add_trace(
+                go.Bar(
+                    x=chart_metrics,
+                    y=values,
+                    name=label,
+                    marker={"color": color},
+                    text=[f"{v:.3f}" for v in values],
+                    textposition="outside",
+                    textfont={"size": 11},
+                    hovertemplate=f"<b>{label}</b><br>%{{x}}: %{{y:.4f}}<extra></extra>",
+                )
+            )
+        chart.update_layout(
+            height=440,
+            barmode="group",
+            bargap=.24,
+            bargroupgap=.08,
+            margin={"l": 20, "r": 20, "t": 35, "b": 20},
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(255,255,255,0.9)",
+            font=_plotly_font(),
+            legend={"orientation": "h", "yanchor": "bottom", "y": 1.08, "xanchor": "left", "x": 0},
+            xaxis={"title": None, "showgrid": False},
+            yaxis={
+                "title": "평가 점수",
+                "range": [y_min, y_max_bar],
+                "tickformat": ".2f",
+                "gridcolor": "#E8E8ED",
+                "zeroline": False,
+            },
+        )
     st.plotly_chart(chart, width="stretch", config={"displayModeBar": False})
 
     with st.expander("혼동행렬 수치 보기"):
@@ -188,18 +294,91 @@ def _render_dl_performance() -> None:
     chart_metrics = [c for c in METRIC_LABELS.values() if c in display.columns]
     st.markdown("**평가 지표**")
     best_row = display.iloc[0]
-    hbar_chart([(m, float(best_row[m]) * 100) for m in chart_metrics], max_value=100, value_format="{:.1f}%")
+    metric_values = [float(best_row[m]) * 100 for m in chart_metrics]
+
+    dl_chart_type = _chart_type_picker(
+        "그래프 종류", ["레이더 차트", "막대 그래프"], key="model_dl_chart_type"
+    )
+
+    dl_chart = go.Figure()
+    if dl_chart_type == "막대 그래프":
+        dl_chart.add_trace(
+            go.Bar(
+                x=chart_metrics,
+                y=metric_values,
+                marker={"color": "#5E5CE6"},
+                text=[f"{v:.1f}" for v in metric_values],
+                textposition="outside",
+                hovertemplate="%{x}: %{y:.1f}<extra></extra>",
+            )
+        )
+        dl_chart.update_layout(
+            height=380,
+            margin={"l": 20, "r": 20, "t": 35, "b": 20},
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(255,255,255,0.9)",
+            font=_plotly_font(),
+            showlegend=False,
+            xaxis={"title": None, "showgrid": False},
+            yaxis={
+                "title": "점수 (0~100)",
+                "range": [0, min(112, float(max(metric_values)) + 12)],
+                "gridcolor": "#E8E8ED",
+                "zeroline": False,
+            },
+        )
+    else:
+        dl_chart.add_trace(
+            go.Scatterpolar(
+                r=metric_values + [metric_values[0]],
+                theta=chart_metrics + [chart_metrics[0]],
+                fill="toself",
+                name="MLP",
+                line={"color": "#5E5CE6", "width": 3},
+                fillcolor=_hex_to_rgba("#5E5CE6", 0.25),
+                hovertemplate="%{theta}: %{r:.1f}<extra></extra>",
+            )
+        )
+        dl_chart.update_layout(
+            polar={
+                "radialaxis": {"visible": True, "range": [0, 100], "gridcolor": "#E8E8ED"},
+                "angularaxis": {"gridcolor": "#E8E8ED"},
+                "bgcolor": "rgba(255,255,255,0.6)",
+            },
+            showlegend=False,
+            margin={"l": 50, "r": 50, "t": 30, "b": 30},
+            height=420,
+            paper_bgcolor="rgba(0,0,0,0)",
+            font=_plotly_font(),
+        )
+    st.plotly_chart(dl_chart, width="stretch", config={"displayModeBar": False})
 
     if {"tn", "fp", "fn", "tp"}.issubset(report.columns):
-        st.markdown("**혼동행렬 수치**")
-        confusion = pd.DataFrame(
-            {
-                "구분": ["실제 0", "실제 1"],
-                "예측 0": [int(best["tn"]), int(best["fn"])],
-                "예측 1": [int(best["fp"]), int(best["tp"])],
-            }
+        st.markdown("**혼동행렬**")
+        z = [[int(best["tn"]), int(best["fp"])], [int(best["fn"]), int(best["tp"])]]
+        heat = go.Figure(
+            data=go.Heatmap(
+                z=z,
+                x=["예측 0 (재직)", "예측 1 (퇴사)"],
+                y=["실제 0 (재직)", "실제 1 (퇴사)"],
+                colorscale=[[0, "#F5F5F7"], [1, "#5E5CE6"]],
+                showscale=False,
+                text=z,
+                texttemplate="%{text:,}",
+                textfont={"size": 18, "color": "#1D1D1F"},
+                hovertemplate="%{y} · %{x}: %{z:,}<extra></extra>",
+            )
         )
-        render_table(confusion)
+        heat.update_layout(
+            height=300,
+            margin={"l": 10, "r": 10, "t": 10, "b": 10},
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            font={"family": "-apple-system, BlinkMacSystemFont, sans-serif", "color": "#1D1D1F"},
+            xaxis={"side": "top"},
+            yaxis={"autorange": "reversed"},
+        )
+        st.plotly_chart(heat, width="stretch", config={"displayModeBar": False})
 
     alert_box("info", "이 프로젝트의 공통 예측값은 퇴사=1, 재직=0이에요.")
 
@@ -224,6 +403,13 @@ def _render_ml_vs_dl() -> None:
 
     roc_delta = float(best_ml["roc_auc"] - best_dl["roc_auc"])
     winner = ml_name if roc_delta >= 0 else dl_name
+    versus_hero(
+        ml_name,
+        f"{best_ml['roc_auc']:.4f}",
+        dl_name,
+        f"{best_dl['roc_auc']:.4f}",
+        winner=winner,
+    )
     stat_cards(
         [
             {"label": "머신러닝 1위", "value": ml_name, "hint": f"ROC {best_ml['roc_auc']:.4f}"},
@@ -242,13 +428,95 @@ def _render_ml_vs_dl() -> None:
     render_table(comparison, formats={label: "{:.4f}" for label in METRIC_LABELS.values()})
 
     st.markdown("**지표별 비교**")
-    for metric_key, metric_label in METRIC_LABELS.items():
-        hbar_chart(
-            [(ml_name, float(best_ml[metric_key]) * 100), (dl_name, float(best_dl[metric_key]) * 100)],
-            max_value=100,
-            value_format="{:.1f}%",
+    metric_labels_list = list(METRIC_LABELS.values())
+    ml_values = [float(best_ml[key]) * 100 for key in METRIC_LABELS]
+    dl_values = [float(best_dl[key]) * 100 for key in METRIC_LABELS]
+
+    vs_chart_type = _chart_type_picker(
+        "그래프 종류", ["레이더 차트", "막대 그래프"], key="model_vs_chart_type"
+    )
+
+    overlay = go.Figure()
+    if vs_chart_type == "막대 그래프":
+        overlay.add_trace(
+            go.Bar(
+                x=metric_labels_list,
+                y=ml_values,
+                name=ml_name,
+                marker={"color": "#0071E3"},
+                text=[f"{v:.1f}" for v in ml_values],
+                textposition="outside",
+                hovertemplate=f"<b>{ml_name}</b><br>%{{x}}: %{{y:.1f}}<extra></extra>",
+            )
         )
-        st.caption(metric_label)
+        overlay.add_trace(
+            go.Bar(
+                x=metric_labels_list,
+                y=dl_values,
+                name=dl_name,
+                marker={"color": "#5E5CE6"},
+                text=[f"{v:.1f}" for v in dl_values],
+                textposition="outside",
+                hovertemplate=f"<b>{dl_name}</b><br>%{{x}}: %{{y:.1f}}<extra></extra>",
+            )
+        )
+        overlay.update_layout(
+            height=440,
+            barmode="group",
+            bargap=.28,
+            bargroupgap=.1,
+            margin={"l": 20, "r": 20, "t": 35, "b": 20},
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(255,255,255,0.9)",
+            font=_plotly_font(),
+            legend={"orientation": "h", "yanchor": "bottom", "y": 1.08, "xanchor": "center", "x": 0.5},
+            xaxis={"title": None, "showgrid": False},
+            yaxis={
+                "title": "점수 (0~100)",
+                "range": [0, min(112, float(max(ml_values + dl_values)) + 12)],
+                "gridcolor": "#E8E8ED",
+                "zeroline": False,
+            },
+        )
+    else:
+        # 지표 6개를 각각 막대쌍으로 나열하는 대신, ML·DL 두 모델의 전체 성능 프로필을
+        # 하나의 레이더에 겹쳐 그려서 어느 지표에서 서로 강점이 갈리는지 한 번에 보여준다.
+        overlay.add_trace(
+            go.Scatterpolar(
+                r=ml_values + [ml_values[0]],
+                theta=metric_labels_list + [metric_labels_list[0]],
+                fill="toself",
+                name=ml_name,
+                line={"color": "#0071E3", "width": 3},
+                fillcolor=_hex_to_rgba("#0071E3", 0.22),
+                hovertemplate="%{theta}: %{r:.1f}<extra>" + ml_name + "</extra>",
+            )
+        )
+        overlay.add_trace(
+            go.Scatterpolar(
+                r=dl_values + [dl_values[0]],
+                theta=metric_labels_list + [metric_labels_list[0]],
+                fill="toself",
+                name=dl_name,
+                line={"color": "#5E5CE6", "width": 3},
+                fillcolor=_hex_to_rgba("#5E5CE6", 0.22),
+                hovertemplate="%{theta}: %{r:.1f}<extra>" + dl_name + "</extra>",
+            )
+        )
+        overlay.update_layout(
+            polar={
+                "radialaxis": {"visible": True, "range": [0, 100], "gridcolor": "#E8E8ED"},
+                "angularaxis": {"gridcolor": "#E8E8ED"},
+                "bgcolor": "rgba(255,255,255,0.6)",
+            },
+            showlegend=True,
+            legend={"orientation": "h", "yanchor": "bottom", "y": 1.05, "xanchor": "center", "x": 0.5},
+            margin={"l": 50, "r": 50, "t": 30, "b": 30},
+            height=460,
+            paper_bgcolor="rgba(0,0,0,0)",
+            font=_plotly_font(),
+        )
+    st.plotly_chart(overlay, width="stretch", config={"displayModeBar": False})
 
     alert_box("info", "두 모델 모두 퇴사=1을 양성 클래스로 평가한 보고서일 때 가장 정확한 비교가 됩니다.")
 
@@ -292,7 +560,8 @@ def _render_training_details() -> None:
 def render() -> None:
     section_heading(
         "05 · MODEL OPERATIONS (관리자 전용)",
-        "모델 성능 평가",
+        "Model Intelligence",
+        "Know which model makes the better decision. "
         "ML·DL 모델별 성능과 학습 근거를 확인해요. 인사팀 화면에는 표시되지 않아요.",
     )
 

@@ -20,22 +20,84 @@ from src.utils.hr_metrics import (
     alternative_candidates,
     department_options,
     fill_team_slots,
-    risk_badge_tone,
     team_fit_score,
     team_stability_verdict,
     translate,
 )
-from streamlit_ui import alert_box, render_table, section_heading, stat_cards
+from streamlit_ui import alert_box, narrative_banner, ranking_list, section_heading, stat_cards
 
 
 def _slot_key(department: str) -> str:
     return f"team_slot_{department}"
 
 
+@st.dialog("팀원 교체해보기", width="medium")
+def _swap_dialog(
+    employees: pd.DataFrame,
+    display_team: pd.DataFrame,
+    recommended_team: pd.DataFrame,
+    talent_weight: float,
+    swap_map: dict,
+) -> None:
+    """추천된 팀원 중 한 명을 같은 부서·직급의 다른 후보로 바꿔보는 모달."""
+
+    st.caption("추천된 팀원 중 한 명을 골라 같은 부서·직급의 다른 후보로 바꿔볼 수 있어요.")
+
+    swap_target_labels = {
+        int(row["Employee ID"]): f"ID {int(row['Employee ID'])} · {translate(row['Job Role'])} · {translate(row['Job Level'])}"
+        for _, row in display_team.iterrows()
+    }
+    target_id = st.selectbox(
+        "교체할 팀원",
+        list(swap_target_labels.keys()),
+        format_func=lambda i: swap_target_labels.get(i, str(i)),
+        key="team_swap_target",
+    )
+    target_row = display_team.loc[display_team["Employee ID"].eq(target_id)].iloc[0]
+    exclude_ids = set(recommended_team["Employee ID"].tolist())
+    alternatives = alternative_candidates(
+        employees, target_row["Job Role"], target_row["Job Level"], talent_weight, exclude_ids
+    )
+
+    if alternatives.empty:
+        st.selectbox("대체 후보", ["대체 후보 없음"], key="team_swap_candidate_empty", disabled=True)
+        replacement_id = None
+    else:
+        alt_labels = {
+            int(row["Employee ID"]): (
+                f"ID {int(row['Employee ID'])} · 적합 {row['팀 적합 점수']:.1f} · 인재가치 {row['인재 가치 지수']:.1f}"
+            )
+            for _, row in alternatives.iterrows()
+        }
+        replacement_id = st.selectbox(
+            "대체 후보",
+            list(alt_labels.keys()),
+            format_func=lambda i: alt_labels.get(i, str(i)),
+            key="team_swap_candidate",
+        )
+
+    action_cols = st.columns(2)
+    with action_cols[0]:
+        if st.button(
+            "교체하기",
+            key="team_swap_apply",
+            type="primary",
+            width="stretch",
+            disabled=replacement_id is None,
+        ):
+            swap_map[target_id] = replacement_id
+            st.rerun()
+    with action_cols[1]:
+        if st.button("교체 초기화", key="team_swap_reset", width="stretch", disabled=not swap_map):
+            st.session_state["team_swap_map"] = {}
+            st.rerun()
+
+
 def render(employees: pd.DataFrame) -> None:
     section_heading(
         "02 · TEAM COMPOSITION",
-        "프로젝트 팀 구성",
+        "Build your team.",
+        "Choose the people who make the team stronger. "
         "필요한 부서·직급별 인원을 먼저 정하면, 슬롯마다 가장 적합한 인원을 채워 드려요.",
     )
 
@@ -76,7 +138,7 @@ def render(employees: pd.DataFrame) -> None:
     total_needed = sum(sum(counts.values()) for counts in level_counts_by_dept.values())
 
     talent_weight = st.slider(
-        "인재 가치 비중",
+        "Talent Value Weight · 인재 가치 비중",
         0.3,
         0.9,
         0.6,
@@ -129,88 +191,51 @@ def render(employees: pd.DataFrame) -> None:
     verdict_label, verdict_tone, verdict_note = team_stability_verdict(mean_risk)
     high_risk_count = int(recommended_team["prediction"].ge(0.6).sum())
 
+    narrative_banner(
+        "TEAM STABILITY",
+        f"{(1 - mean_risk) * 100:.0f}",
+        verdict_label.upper(),
+        verdict_tone,
+        verdict_note,
+    )
+
     stat_cards(
         [
-            {"label": "구성된 팀원", "value": f"{len(recommended_team)}명 / {total_needed}명"},
-            {"label": "평균 인재 가치", "value": f"{recommended_team['인재 가치 지수'].mean():.1f}"},
-            {"label": "평균 퇴사 위험", "value": f"{mean_risk:.1%}", "tone": verdict_tone},
-            {"label": "고위험 팀원", "value": f"{high_risk_count}명", "tone": "danger" if high_risk_count else "safe"},
+            {"label": "Team Size", "value": f"{len(recommended_team)} / {total_needed}"},
+            {"label": "Avg. Talent Value", "value": f"{recommended_team['인재 가치 지수'].mean():.1f}"},
+            {"label": "Avg. Attrition Risk", "value": f"{mean_risk:.1%}", "tone": verdict_tone},
+            {"label": "High-Risk Members", "value": f"{high_risk_count}", "tone": "danger" if high_risk_count else "safe"},
         ]
     )
     st.markdown('<div class="section-spacer-lg"></div>', unsafe_allow_html=True)
 
-    st.markdown(
-        f'<div class="verdict-badge tone-{verdict_tone}">이 팀의 안정도 · {verdict_label}</div>',
-        unsafe_allow_html=True,
-    )
-    alert_box("info" if verdict_tone in ("safe", "info") else verdict_tone, verdict_note)
-
+    st.markdown("**Team Roster · 추천 팀원**")
     display_team = recommended_team.sort_values(["Job Role", "Job Level"]).reset_index(drop=True)
-    team_table = display_team[
-        ["Employee ID", "Job Role", "Job Level", "인재 가치 지수", "prediction", "팀 적합 점수"]
-    ].rename(
-        columns={
-            "Employee ID": "직원 ID",
-            "Job Role": "부서",
-            "Job Level": "직급",
-            "prediction": "퇴사 예측률",
-        }
-    )
-    team_table["부서"] = team_table["부서"].map(translate)
-    team_table["직급"] = team_table["직급"].map(translate)
-    render_table(
-        team_table,
-        formats={"인재 가치 지수": "{:.1f}", "퇴사 예측률": "{:.1%}", "팀 적합 점수": "{:.1f}"},
-        badges={"퇴사 예측률": lambda v: (f"{v:.1%}", risk_badge_tone(v))},
-        bars={"인재 가치 지수": 100.0, "팀 적합 점수": 100.0},
-    )
-    st.caption(f"팀 적합 점수 = 인재 가치 {talent_weight:.0%} + 잔류 가능성 {1 - talent_weight:.0%}")
+    ranking_rows = []
+    for index, row in display_team.iterrows():
+        talent_value = float(row["인재 가치 지수"])
+        retention = (1 - float(row["prediction"])) * 100
+        fit_score = float(row["팀 적합 점수"])
+        ranking_rows.append(
+            {
+                "rank": index + 1,
+                "title": f"Employee {int(row['Employee ID'])}",
+                "subtitle": f"{translate(row['Job Role'])} · {translate(row['Job Level'])}",
+                "metrics": [
+                    {"label": "Talent Value", "value": f"{talent_value:.0f}", "kind": "bar", "pct": talent_value},
+                    {"label": "Retention", "value": f"{retention:.0f}%", "kind": "bar", "pct": retention},
+                    {"label": "Team Fit", "value": f"{fit_score:.0f}", "kind": "ring", "pct": fit_score},
+                ],
+            }
+        )
+    ranking_list(ranking_rows)
+    st.caption(f"Team Fit = 인재 가치 {talent_weight:.0%} + 잔류 가능성 {1 - talent_weight:.0%}")
 
     st.markdown('<div class="section-divider-thin"></div>', unsafe_allow_html=True)
-    st.markdown("**팀원 교체해보기**")
-    st.caption("추천된 팀원 중 한 명을 골라 같은 부서·직급의 다른 후보로 바꿔볼 수 있어요.")
 
-    swap_target_labels = {
-        int(row["Employee ID"]): f"ID {int(row['Employee ID'])} · {translate(row['Job Role'])} · {translate(row['Job Level'])}"
-        for _, row in display_team.iterrows()
-    }
-    swap_cols = st.columns([2, 2, 1])
-    with swap_cols[0]:
-        target_id = st.selectbox(
-            "교체할 팀원",
-            list(swap_target_labels.keys()),
-            format_func=lambda i: swap_target_labels.get(i, str(i)),
-            key="team_swap_target",
+    with st.container(key="team-swap-fab"):
+        swap_fab_clicked = st.button(
+            "⇄ Swap Member", key="team_swap_fab_btn", help="팀원 교체를 모달로 열어요"
         )
-    target_row = display_team.loc[display_team["Employee ID"].eq(target_id)].iloc[0]
-    exclude_ids = set(recommended_team["Employee ID"].tolist())
-    alternatives = alternative_candidates(
-        employees, target_row["Job Role"], target_row["Job Level"], talent_weight, exclude_ids
-    )
-    with swap_cols[1]:
-        if alternatives.empty:
-            st.selectbox("대체 후보", ["대체 후보 없음"], key="team_swap_candidate_empty", disabled=True)
-            replacement_id = None
-        else:
-            alt_labels = {
-                int(row["Employee ID"]): (
-                    f"ID {int(row['Employee ID'])} · 적합 {row['팀 적합 점수']:.1f} · 인재가치 {row['인재 가치 지수']:.1f}"
-                )
-                for _, row in alternatives.iterrows()
-            }
-            replacement_id = st.selectbox(
-                "대체 후보",
-                list(alt_labels.keys()),
-                format_func=lambda i: alt_labels.get(i, str(i)),
-                key="team_swap_candidate",
-            )
-    with swap_cols[2]:
-        st.markdown("<div style='height:1.9rem'></div>", unsafe_allow_html=True)
-        if st.button("교체하기", key="team_swap_apply", width="stretch", disabled=replacement_id is None):
-            swap_map[target_id] = replacement_id
-            st.rerun()
-
-    if swap_map:
-        if st.button("교체 초기화", key="team_swap_reset"):
-            st.session_state["team_swap_map"] = {}
-            st.rerun()
+    if swap_fab_clicked:
+        _swap_dialog(employees, display_team, recommended_team, talent_weight, swap_map)

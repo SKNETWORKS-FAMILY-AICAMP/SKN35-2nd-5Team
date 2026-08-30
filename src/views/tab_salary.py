@@ -2,9 +2,10 @@
 
 퇴사 예측률과 인재 가치 지수를 함께 보여줘서, "일은 잘하는데 나갈 확률이 높은 사람"과
 "굳이 더 안 줘도 되는 사람"을 구분해 협상 우선순위를 정하도록 돕는다. 추가로 조건을
-바꿔보는 What-if 시뮬레이터는 화면 하단에 묻히지 않도록, 좌하단에 떠 있는 작은 버튼을
-눌러 모달(st.dialog)로 열람하는 방식으로 제공한다. 값 표시는 대부분 순수 HTML/CSS
-컴포넌트로 그리고, 선택·폼처럼 실제 입력이 필요한 부분만 Streamlit 위젯을 사용한다.
+바꿔보는 What-if 시뮬레이터는 화면 하단에 묻히지 않도록, 우하단에 떠 있는 Floating
+Action Button을 눌러 모달(st.dialog)로 열람하는 방식으로 제공한다. 값 표시는 대부분
+순수 HTML/CSS 컴포넌트로 그리고, 선택·폼처럼 실제 입력이 필요한 부분만 Streamlit
+위젯을 사용한다.
 """
 
 from __future__ import annotations
@@ -24,6 +25,7 @@ from src.utils.hr_metrics import (
 )
 from streamlit_ui import (
     alert_box,
+    employee_hero,
     employee_picker,
     feature_pills,
     hbar_chart,
@@ -55,7 +57,7 @@ def _wheel_picker(label: str, options: list[int | float], current: int | float, 
     return type(current)(selected)
 
 
-@st.dialog("💡 조건 조정 시뮬레이션 (What-if)", width="medium")
+@st.dialog("What if we change compensation?", width="medium")
 def _scenario_dialog(employee: pd.Series, selected_id, train_data: pd.DataFrame, model) -> None:
     st.caption("이 직원의 조건을 조정하면 예측 퇴사 확률이 어떻게 바뀌는지 미리 확인해요.")
     feature_names = list(getattr(model, "feature_names_in_", []))
@@ -119,20 +121,21 @@ def _scenario_dialog(employee: pd.Series, selected_id, train_data: pd.DataFrame,
             change_text = "위험 감소" if delta < 0 else "위험 증가" if delta > 0 else "변화 없음"
             stat_cards(
                 [
-                    {"label": "조정 전", "value": f"{before:.1%}", "hint": risk_label(before), "tone": risk_badge_tone(before)},
-                    {"label": "조정 후", "value": f"{after:.1%}", "hint": f"{delta:+.1%}", "tone": risk_badge_tone(after)},
-                    {"label": "변화", "value": change_text},
+                    {"label": "Before", "value": f"{before:.1%}", "hint": risk_label(before), "tone": risk_badge_tone(before)},
+                    {"label": "After", "value": f"{after:.1%}", "hint": f"{delta:+.1%}", "tone": risk_badge_tone(after)},
+                    {"label": "Change", "value": change_text},
                 ]
             )
-            hbar_chart([("조정 전", before * 100), ("조정 후", after * 100)], max_value=100, value_format="{:.1f}%")
+            hbar_chart([("Before", before * 100), ("After", after * 100)], max_value=100, value_format="{:.1f}%")
             alert_box("warning", "이 결과는 협상 참고용입니다. 개인에 대한 자동 평가나 불이익 부과에 사용하면 안 돼요.")
 
 
 def render(employees: pd.DataFrame, train_data: pd.DataFrame, model) -> None:
     section_heading(
         "01 · COMPENSATION INTELLIGENCE",
-        "연봉 협상 지원",
-        "직원을 부서 → 직급 → ID 순으로 좁혀 선택하고, 퇴사 확률과 인재 가치 지수를 함께 확인하세요.",
+        "Salary Intelligence",
+        "Protect high-value talent before they leave. "
+        "직원을 부서 → 직급 → ID 순으로 좁혀 선택하면, 퇴사 확률과 인재 가치 지수를 함께 확인할 수 있어요.",
     )
 
     selected_id = employee_picker(employees, key_prefix="salary", with_direct_search=True)
@@ -146,19 +149,21 @@ def render(employees: pd.DataFrame, train_data: pd.DataFrame, model) -> None:
     label = risk_label(risk)
     tone = risk_badge_tone(risk)
 
-    stat_cards(
-        [
-            {"label": "부서 · 직급", "value": f"{translate(employee['Job Role'])} · {translate(employee['Job Level'])}"},
-            {"label": "현재 월 소득", "value": f"${float(employee['Monthly Income']):,.0f}"},
-            {"label": "퇴사 예측률", "value": f"{risk:.1%}", "hint": f"위험도 {label}", "tone": tone},
-            {"label": "인재 가치 지수", "value": f"{talent:.1f} / 100"},
-        ]
+    employee_hero(
+        employee_id=selected_id,
+        department=employee["Job Role"],
+        level=employee["Job Level"],
+        risk_pct=risk,
+        risk_label_text=label.upper(),
+        risk_tone=tone,
+        talent_score=talent,
+        extra_badges=[f"${float(employee['Monthly Income']):,.0f} / mo"],
     )
     st.markdown('<div class="section-spacer-lg"></div>', unsafe_allow_html=True)
 
     left, right = st.columns(2)
     with left:
-        st.markdown("**퇴사 예측 활용 항목**")
+        st.markdown("**Current Profile · 퇴사 예측 활용 항목**")
         feature_pills(RISK_FEATURES, FEATURE_LABELS)
         risk_display = pd.DataFrame(
             {
@@ -168,7 +173,7 @@ def render(employees: pd.DataFrame, train_data: pd.DataFrame, model) -> None:
         )
         render_table(risk_display, widths={"항목": "42%", "현재 값": "58%"})
     with right:
-        st.markdown("**인재 가치 구성**")
+        st.markdown("**Talent Value · 인재 가치 구성**")
         feature_pills(list(TALENT_FEATURE_LABELS.keys()), FEATURE_LABELS)
         hbar_chart(
             [
@@ -180,7 +185,7 @@ def render(employees: pd.DataFrame, train_data: pd.DataFrame, model) -> None:
             ],
             max_value=100,
             color="var(--blue)",
-            # 왼쪽 "퇴사 예측 활용 항목" 표는 6행이라 오른쪽(5개 막대)보다 항상 더 길다.
+            # 왼쪽 "Current Profile" 표는 6행이라 오른쪽(5개 막대)보다 항상 더 길다.
             # 막대 5개를 이 높이 안에 고르게 펼쳐서, 위쪽에만 몰려 보이지 않게 한다.
             min_height="341px",
         )
@@ -194,6 +199,6 @@ def render(employees: pd.DataFrame, train_data: pd.DataFrame, model) -> None:
     alert_box("info", message, title="협상 제안")
 
     with st.container(key="salary-sim-fab"):
-        fab_clicked = st.button("💡 조건 조정 시뮬레이션", key="salary_sim_fab_btn", help="What-if 시뮬레이션을 모달로 열어요")
+        fab_clicked = st.button("＋ Simulate", key="salary_sim_fab_btn", help="What-if 시뮬레이션을 모달로 열어요")
     if fab_clicked:
         _scenario_dialog(employee, selected_id, train_data, model)
