@@ -7,7 +7,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from streamlit_ui import apply_page_style, page_header, style_plotly_chart, top_navigation
+from streamlit_ui import apply_page_style, page_header, segmented_nav, style_plotly_chart, top_navigation
 
 st.set_page_config(page_title="TalentShield | ML/DL 성능평가", layout="wide")
 apply_page_style(); top_navigation("models")
@@ -37,14 +37,14 @@ def model_table(frame: pd.DataFrame) -> None:
         label = ML_LABELS.get(str(r["model"]), str(r["model"]).upper())
         star = "★ " if float(r["f1"]) == best_f1 else ""
         cells = "".join(f'<td class="{("best-cell" if float(r[key]) == frame[key].max() else "")}">{float(r[key]):.1%}</td>' for key, _ in METRICS)
-        rows.append(f'<tr><td><b>{star}{escape(label)}</b></td>{cells}<td><span class="model-type">ML</span></td></tr>')
+        rows.append(f'<tr><td><b>{star}{escape(label)}</b></td>{cells}<td><span class="model-type ml">ML</span></td></tr>')
     st.markdown('<div class="glass-card perf-table"><table><thead><tr><th>모델명</th>' + "".join(f'<th>{label}</th>' for _, label in METRICS) + '<th>유형</th></tr></thead><tbody>' + "".join(rows) + "</tbody></table></div>", unsafe_allow_html=True)
 
 
 ml, dl = load_reports()
 best_ml = ml.iloc[0]
 ml_name = ML_LABELS.get(str(best_ml["model"]), str(best_ml["model"]))
-tab = st.segmented_control("분석 보기", ["ML 모델 비교", "ML vs DL", "채택 모델 분석"], default="ML 모델 비교", label_visibility="collapsed")
+tab = segmented_nav(["ML 모델 비교", "ML vs DL", "채택 모델 분석"], "view")
 
 if tab == "ML 모델 비교":
     top_accuracy = ml.loc[ml["accuracy"].idxmax()]
@@ -80,7 +80,8 @@ elif tab == "ML vs DL":
     for _, r in combined.iterrows():
         model = ML_LABELS.get(str(r["model"]), str(r["model"]))
         kind = "DL" if model == "MLP" else "ML"
-        rows.append('<tr><td><b>' + escape(model) + f'</b></td><td><span class="model-type">{kind}</span></td>' + "".join(f'<td>{float(r[k]):.1%}</td>' for k, _ in METRICS) + "</tr>")
+        kind_class = "dl" if kind == "DL" else "ml"
+        rows.append('<tr><td><b>' + escape(model) + f'</b></td><td><span class="model-type {kind_class}">{kind}</span></td>' + "".join(f'<td>{float(r[k]):.1%}</td>' for k, _ in METRICS) + "</tr>")
     st.caption("전체 모델 비교")
     st.markdown('<div class="glass-card perf-table"><table><thead><tr><th>모델명</th><th>유형</th>' + "".join(f'<th>{n}</th>' for _, n in METRICS) + '</tr></thead><tbody>' + "".join(rows) + "</tbody></table></div>", unsafe_allow_html=True)
 

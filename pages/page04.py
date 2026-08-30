@@ -7,7 +7,7 @@ from streamlit_ui import apply_page_style, page_header, top_navigation
 
 st.set_page_config(page_title="TalentGuard AI | 인사 지원", layout="wide")
 apply_page_style(); top_navigation("people")
-page_header("HR ADMIN · PEOPLE DECISION", "인사 지원", "동일 직무 그룹에서 승진·발령·검토 우선순위를 비교합니다.")
+page_header("HR ADMIN · PEOPLE DECISION", "인사 지원", "승진 / 발령 우선순위 — 안정 인재가치 점수 기반")
 try:
     render_people_decision(get_employees())
 except Exception as error:
