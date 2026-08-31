@@ -5,14 +5,19 @@
 버튼바로 구현했다.
 """
 
-from pathlib import Path
-
 import pandas as pd
 import streamlit as st
 
 from src.data.loader import load_raw_test, load_raw_train
-from src.data.prediction import create_employee_predictions, load_prediction_model
+from src.data.prediction import create_employee_predictions, load_hr_prediction_model
 from src.utils.hr_metrics import add_talent_value
+from src.utils.paths import (
+    MLP_BEST_PARAMS_PATH,
+    MLP_METADATA_PATH,
+    MLP_MODEL_PATH,
+    MLP_PREPROCESSOR_PATH,
+    MLP_THRESHOLD_PATH,
+)
 from src.views import tab_hr_actions, tab_models, tab_salary, tab_stability, tab_team
 from streamlit_ui import (
     alert_box,
@@ -53,11 +58,18 @@ page_header(
     f"{ROLE_LABELS[role]} 모드로 접속했어요. 아래 버튼으로 원하는 업무 화면을 바로 전환할 수 있어요.",
 )
 
-MODEL_PATH = Path("artifacts/ml/best_ml_model.joblib")
-if not MODEL_PATH.exists():
+MODEL_PATHS = (
+    MLP_MODEL_PATH,
+    MLP_PREPROCESSOR_PATH,
+    MLP_BEST_PARAMS_PATH,
+    MLP_THRESHOLD_PATH,
+    MLP_METADATA_PATH,
+)
+missing_model_paths = [str(path) for path in MODEL_PATHS if not path.exists()]
+if missing_model_paths:
     alert_box(
         "danger",
-        "최종 예측 모델이 없습니다. artifacts/ml/best_ml_model.joblib을 먼저 생성해 주세요.",
+        "HR 예측용 MLP 산출물이 없습니다: " + ", ".join(missing_model_paths),
     )
     st.stop()
 
@@ -68,26 +80,25 @@ def load_data():
 
 
 @st.cache_resource
-def load_model(path: str, modified_time: float):
-    del modified_time
-    return load_prediction_model(path)
+def load_model(artifact_signature: tuple[tuple[str, float], ...]):
+    del artifact_signature
+    return load_hr_prediction_model()
 
 
 @st.cache_data
-def predict_all_employees(all_raw, raw_train, model_path: str, modified_time: float):
+def predict_all_employees(all_raw, raw_train, artifact_signature):
     # train.csv(약 59,598명) + test.csv(약 14,900명)를 합쳐 회사 전체 인원을 기준으로
     # 예측·통계를 낸다. 두 파일의 Employee ID는 서로 겹치지 않는 것을 확인했다.
-    model = load_model(model_path, modified_time)
+    model = load_model(artifact_signature)
     return create_employee_predictions(all_raw, raw_train, model)
 
 
 try:
     train_data, test_data = load_data()
     all_raw = pd.concat([train_data, test_data], ignore_index=True)
-    model = load_model(str(MODEL_PATH), MODEL_PATH.stat().st_mtime)
-    predictions = predict_all_employees(
-        all_raw, train_data, str(MODEL_PATH), MODEL_PATH.stat().st_mtime
-    )
+    artifact_signature = tuple((str(path), path.stat().st_mtime) for path in MODEL_PATHS)
+    model = load_model(artifact_signature)
+    predictions = predict_all_employees(all_raw, train_data, artifact_signature)
     employees = all_raw.merge(
         predictions,
         left_on="Employee ID",

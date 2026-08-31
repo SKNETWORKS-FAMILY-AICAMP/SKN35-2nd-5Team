@@ -1,0 +1,8 @@
+{
+  "iterations": 300,
+  "learning_rate": 0.06903497217204961,
+  "depth": 3,
+  "l2_leaf_reg": 4.418655026685086,
+  "random_strength": 1.250385451365276,
+  "border_count": 128
+}
