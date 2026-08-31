@@ -795,6 +795,449 @@ def _apply_page_style_part3() -> None:
         """,
         unsafe_allow_html=True,
     )
+    _apply_ios_reference_overrides()
+
+
+def _apply_ios_reference_overrides() -> None:
+    """Figma iOS 레퍼런스의 밀도·색·고정 내비게이션을 최종 스타일로 덮어쓴다."""
+
+    st.markdown(
+        """
+        <style>
+        :root {
+            --ink: #111827;
+            --muted: #64748B;
+            --faint: #94A3B8;
+            --surface: #FFFFFF;
+            --surface-alt: #F8FAFC;
+            --surface-sunken: #F1F5F9;
+            --line: #DCE2EA;
+            --line-soft: #EDF1F5;
+            --blue: #2563EB;
+            --blue-deep: #1D4ED8;
+            --blue-soft: rgba(37, 99, 235, .08);
+            --glass-bg: rgba(255, 255, 255, .60);
+            --glass-bg-strong: rgba(255, 255, 255, .86);
+            --glass-border: rgba(255, 255, 255, .82);
+            --glass-blur: 32px;
+            --r-sm: 12px;
+            --r-md: 16px;
+            --r-lg: 20px;
+            --r-xl: 24px;
+            --shadow-sm: 0 1px 3px rgba(15, 23, 42, .07);
+            --shadow-md: 0 8px 24px rgba(15, 23, 42, .07);
+            --shadow-lg: 0 20px 52px rgba(15, 23, 42, .13);
+            --shadow-glow: 0 8px 24px rgba(37, 99, 235, .28);
+        }
+
+        html, body, [class*="css"] {
+            font-family: Inter, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+        }
+        .stApp { background: #F8FAFC; }
+        body:has(.hero-wrap) .stApp {
+            background:
+                radial-gradient(ellipse at 18% 22%, rgba(147, 197, 253, .28), transparent 52%),
+                radial-gradient(ellipse at 80% 75%, rgba(196, 181, 253, .18), transparent 50%),
+                linear-gradient(155deg, #EEF3FC 0%, #E7EDF9 38%, #F3F7FD 100%);
+        }
+        .block-container {
+            width: min(calc(100vw - 32px), 1024px);
+            max-width: 1024px;
+            padding: 1.25rem 0 8rem;
+        }
+
+        /* iOS compact workspace header */
+        .st-key-workspace-navigation {
+            position: sticky;
+            top: 0;
+            z-index: 999;
+            margin: -1.25rem calc(50% - 50vw) 1.65rem;
+            padding: .48rem max(1rem, calc((100vw - 1024px) / 2));
+            background: rgba(255, 255, 255, .82);
+            border-bottom: 1px solid #EEF1F5;
+            backdrop-filter: blur(24px) saturate(180%);
+            -webkit-backdrop-filter: blur(24px) saturate(180%);
+        }
+        .st-key-workspace-navigation [data-testid="stHorizontalBlock"] {
+            align-items: center;
+            gap: .35rem;
+        }
+        .workspace-brand {
+            font-size: .82rem;
+            font-weight: 800;
+            letter-spacing: .12em;
+            color: var(--ink);
+        }
+        .workspace-status {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: .45rem;
+            color: var(--faint);
+            font-size: .68rem;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+        .workspace-status::before {
+            content: "";
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #22C55E;
+            box-shadow: 0 0 7px rgba(34, 197, 94, .65);
+        }
+        .st-key-workspace-navigation .stButton > button {
+            min-height: 2rem;
+            padding: .3rem .72rem;
+            border: 0;
+            border-radius: 999px;
+            box-shadow: none;
+            font-size: .7rem;
+            letter-spacing: .03em;
+        }
+        .st-key-workspace-navigation .stButton > button[kind="secondary"] {
+            background: rgba(120, 120, 128, .10);
+            color: #6B7280;
+        }
+        .st-key-workspace-navigation .stButton > button[kind="primary"] {
+            background: #FFFFFF;
+            color: var(--blue);
+            box-shadow: 0 1px 6px rgba(0, 0, 0, .13);
+        }
+        .st-key-workspace-navigation div[class*="st-key-workspace-exit"] button {
+            background: transparent !important;
+            color: #94A3B8 !important;
+            white-space: nowrap;
+        }
+
+        /* Page and section hierarchy */
+        .page-head { margin: .35rem 0 1.2rem; }
+        .page-head-eyebrow, .section-kicker {
+            color: var(--blue);
+            font-size: .7rem;
+            font-weight: 800;
+            letter-spacing: .12em;
+        }
+        .page-head h1 {
+            margin: .25rem 0 .25rem !important;
+            font-size: clamp(1.9rem, 3vw, 2.35rem) !important;
+            line-height: 1.08;
+        }
+        .page-head .muted, .section-desc { color: #7C8799; font-size: .82rem; }
+        .section-kicker { margin-bottom: .35rem; }
+        .section-kicker::before { width: 22px; height: 1px; background: var(--blue); }
+        .section-title { font-size: clamp(1.45rem, 2.4vw, 1.8rem); margin-bottom: .3rem; }
+
+        /* KPI strip */
+        .stat-card-grid {
+            margin: 0 0 1.35rem;
+            border: 1px solid var(--line-soft);
+            border-radius: 16px;
+            background: #FFFFFF;
+            box-shadow: var(--shadow-sm);
+        }
+        .stat-card { min-height: 80px; padding: .9rem 1.25rem; }
+        .stat-card-label { color: #94A3B8; font-size: .68rem; font-weight: 500; }
+        .stat-card-value { color: var(--ink); font-size: clamp(1.45rem, 2.4vw, 1.85rem); }
+
+        /* Fixed iOS liquid-glass tab bar */
+        div[class*="st-key-tabbar-"] {
+            position: fixed;
+            left: 50%;
+            bottom: 20px;
+            z-index: 998;
+            width: min(calc(100vw - 32px), 768px);
+            transform: translateX(-50%);
+            padding: 6px;
+            border: .5px solid rgba(255, 255, 255, .72);
+            border-radius: 22px;
+            background: rgba(255, 255, 255, .76);
+            backdrop-filter: blur(36px) saturate(190%);
+            -webkit-backdrop-filter: blur(36px) saturate(190%);
+            box-shadow: 0 8px 32px rgba(15, 23, 42, .12), inset 0 1px 0 #FFFFFF;
+        }
+        div[class*="st-key-tabbar-"] [data-testid="stHorizontalBlock"] { gap: 3px; }
+        div[class*="st-key-tabbar-"] .stButton > button {
+            min-height: 3.65rem;
+            border: 0;
+            border-radius: 16px;
+            font-size: .72rem;
+            font-weight: 650;
+            line-height: 1.15;
+        }
+        div[class*="st-key-tabbar-"] .stButton > button[kind="primary"] {
+            color: var(--blue);
+            background: rgba(255, 255, 255, .96);
+            box-shadow: 0 2px 12px rgba(15, 23, 42, .12), inset 0 1px 0 #FFFFFF;
+        }
+        div[class*="st-key-tabbar-"] .stButton > button[kind="secondary"] {
+            color: #8E8E93;
+            background: transparent;
+        }
+
+        /* Compact iOS cards and controls */
+        .glass-panel, .role-card, .dept-card, .model-card, .table-wrap,
+        div[data-testid="stPlotlyChart"] {
+            border-color: var(--line-soft);
+            background: #FFFFFF;
+            box-shadow: var(--shadow-sm);
+        }
+        .glass-panel { border-radius: 18px; padding: 1.35rem 1.5rem; margin-bottom: 1rem; }
+        .model-card-grid { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .7rem; }
+        .model-card { border-radius: 16px; padding: 1rem; }
+        .model-card-name { margin-bottom: .7rem; font-size: .68rem; }
+        .model-card-metrics { gap: .38rem; }
+        .model-card-metric-label { font-size: .7rem; }
+        .model-card-metric-value { font-size: .82rem; }
+        .table-wrap { border-radius: 16px; }
+        table.pretty-table { font-size: .78rem; }
+        table.pretty-table thead th { padding: .72rem .8rem; font-size: .64rem; }
+        table.pretty-table tbody td { padding: .68rem .8rem; }
+        div[data-testid="stSelectbox"] > div > div,
+        div[data-testid="stMultiSelect"] > div > div,
+        div[data-baseweb="select"] > div,
+        div[data-testid="stTextInput"] input,
+        div[data-testid="stNumberInput"] > div {
+            border-color: #DCE2EA !important;
+            border-radius: 12px !important;
+            background: #FFFFFF !important;
+        }
+        .st-key-employee-picker {
+            padding: 0;
+            border: 0;
+            border-radius: 0;
+            background: transparent;
+            box-shadow: none;
+            backdrop-filter: none;
+        }
+        div[class*="st-key-subtabbar-"] {
+            padding: 3px;
+            border-radius: 13px;
+            background: #F1F3F6;
+        }
+        div[class*="st-key-subtabbar-"] .stButton > button {
+            min-height: 2.55rem;
+            border: 0;
+            border-radius: 10px;
+        }
+        div[class*="st-key-subtabbar-"] .stButton > button[kind="primary"] {
+            background: var(--blue);
+            color: #FFFFFF;
+            box-shadow: 0 2px 5px rgba(37, 99, 235, .22);
+        }
+
+        /* Landing */
+        .hero-wrap { padding: 4.5rem 0 2.7rem; }
+        .hero-eyebrow {
+            margin-bottom: 1.5rem;
+            color: #6B7280;
+            background: rgba(255, 255, 255, .58);
+            border-color: rgba(255, 255, 255, .8);
+            font-size: .67rem;
+        }
+        .hero-title { font-size: clamp(2.4rem, 5vw, 3.35rem); color: var(--ink); }
+        .hero-desc { max-width: 600px; color: #6B7280; font-size: .92rem; }
+        .role-card {
+            min-height: 390px;
+            padding: 2rem 2rem 1.5rem;
+            border-radius: 24px;
+            background: rgba(255, 255, 255, .58);
+            box-shadow: 0 20px 60px rgba(15, 23, 42, .07), inset 0 1px 0 #FFFFFF;
+        }
+        .role-card-title { font-size: 1.45rem; }
+        .role-card-desc, .role-card-points li { font-size: .82rem; }
+
+        /* Screenshot-faithful compact workspace shell */
+        .stApp:has(.st-key-workspace-navigation) .block-container {
+            width: min(calc(100vw - 26px), 1024px);
+            padding-top: 0;
+            padding-bottom: 7.5rem;
+        }
+        .stApp:has(.st-key-workspace-navigation) .block-container > [data-testid="stVerticalBlock"] {
+            gap: 0 !important;
+        }
+        .st-key-workspace-navigation {
+            min-height: 42px;
+            margin: 0 calc(50% - 50vw) .45rem;
+            padding: 4px max(13px, calc((100vw - 1024px) / 2));
+        }
+        .st-key-workspace-navigation > div,
+        .st-key-workspace-navigation [data-testid="stVerticalBlock"] { gap: 0 !important; }
+        .st-key-workspace-navigation [data-testid="stHorizontalBlock"] { min-height: 32px; }
+        .workspace-brand { font-size: .7rem; letter-spacing: .13em; }
+        .workspace-status { font-size: .58rem; gap: .35rem; }
+        .workspace-status::before { width: 6px; height: 6px; }
+        .st-key-workspace-navigation .stButton > button {
+            min-height: 1.7rem;
+            height: 1.7rem;
+            padding: .15rem .55rem;
+            font-size: .58rem;
+        }
+        .st-key-workspace-page-header { margin: 0 0 .9rem; }
+        .workspace-page-title {
+            margin: 0 0 .22rem !important;
+            color: #182033;
+            font-size: 1.45rem !important;
+            font-weight: 750 !important;
+            letter-spacing: -.025em;
+            line-height: 1.15;
+        }
+        .workspace-page-desc { margin: 0; color: #667085; font-size: .7rem; }
+        .stat-card-grid { flex-wrap:nowrap; margin: 0 0 1rem; padding: 0; border-radius: 14px; }
+        .stat-card { min-height: 66px; padding: .72rem 1rem; }
+        .stat-card-label { margin-bottom: .24rem; font-size: .61rem; }
+        .stat-card-value { font-size: 1.33rem; line-height: 1.05; }
+
+        /* Exact tab composition used by the supplied iOS screens */
+        .section-kicker { margin-bottom: .25rem; font-size: .64rem; letter-spacing: .09em; }
+        .section-kicker::before { width: 20px; }
+        .section-title { margin-bottom: .2rem; font-size: 1.27rem; line-height: 1.16; }
+        .section-desc { max-width: 600px; font-size: .69rem; line-height: 1.42; }
+        .section-desc { margin-bottom: .72rem; }
+        .reference-card {
+            overflow: hidden;
+            border: 1px solid #E7EAF0;
+            border-radius: 14px;
+            background: #FFFFFF;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, .10);
+        }
+        .reference-card-title { color: #111827; font-size: .78rem; font-weight: 750; }
+        .reference-card-subtitle { color: #98A2B3; font-size: .61rem; }
+        .reference-label { color: #98A2B3; font-size: .58rem; font-weight: 600; letter-spacing: .02em; }
+        .reference-value { color: #182033; font-size: .73rem; font-weight: 650; }
+        .reference-grid-2 { display: grid; grid-template-columns: minmax(220px, .9fr) minmax(0, 2.1fr); gap: .85rem; }
+        .reference-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: .7rem; }
+        .reference-kpi { padding: .85rem 1rem; }
+        .reference-kpi-value { margin-top: .25rem; font-size: 1.25rem; font-weight: 800; line-height: 1; }
+
+        /* Salary intelligence panel */
+        .salary-intel { margin-top: .78rem; }
+        .st-key-salary-intelligence-card {
+            overflow: hidden; margin-top: .78rem; border: 1px solid #E7EAF0; border-radius: 14px;
+            background: #FFFFFF; box-shadow: 0 1px 3px rgba(15, 23, 42, .10);
+        }
+        .st-key-employee-picker > div,
+        .st-key-employee-picker [data-testid="stVerticalBlock"] { gap: .3rem !important; }
+        .st-key-employee-picker .section-divider-thin { display:none; }
+        .st-key-salary-intelligence-card > div,
+        .st-key-salary-intelligence-card [data-testid="stVerticalBlock"] { gap: 0 !important; }
+        .salary-intel-head {
+            display: flex; align-items: center; justify-content: space-between;
+            min-height: 41px; padding: .65rem .95rem; border-bottom: 1px solid #F0F2F5;
+        }
+        .salary-intel-employee { display: flex; align-items: center; gap: .65rem; }
+        .salary-intel-id { color: #182033; font-size: .84rem; font-weight: 800; }
+        .salary-intel-meta { display: flex; gap: 1rem; color: #98A2B3; font-size: .61rem; }
+        .salary-intel-meta b { margin-left: .25rem; color: #344054; }
+        .salary-intel-body { display: grid; grid-template-columns: 160px minmax(250px, 1fr) 194px; min-height: 300px; }
+        .salary-risk-column, .salary-radar-column, .salary-feature-column { padding: .85rem 1rem; }
+        .salary-risk-column, .salary-radar-column { border-right: 1px solid #F0F2F5; }
+        .salary-risk-column { display: flex; flex-direction: column; }
+        .salary-gauge { display: flex; justify-content: center; margin: .25rem 0 0; }
+        .salary-talent-row { display: flex; justify-content: space-between; margin-top: .15rem; font-size: .65rem; }
+        .salary-ai-note { margin-top: .9rem; padding: .75rem; border-radius: 11px; background: #F8FAFC; color: #475467; font-size: .63rem; line-height: 1.55; }
+        .salary-ai-note b { display: block; margin-bottom: .35rem; color: #98A2B3; font-size: .57rem; }
+        .salary-radar-wrap { height: 238px; display: grid; place-items: center; }
+        .salary-feature-column { display: flex; flex-direction: column; gap: .58rem; }
+        .salary-feature-name { display: flex; align-items: baseline; justify-content: space-between; gap: .4rem; font-size: .61rem; }
+        .salary-feature-name b { color: #344054; }
+        .salary-feature-name small { margin-left: .25rem; color: #98A2B3; font-size: .54rem; }
+        .salary-feature-track { height: 4px; margin-top: .22rem; border-radius: 999px; background: #F0F2F5; }
+        .salary-feature-fill { height: 100%; border-radius: inherit; }
+        .salary-intel-action { padding: .65rem 1rem .8rem; border-top: 1px solid #F0F2F5; }
+        .st-key-salary-sim-fab { padding: .65rem 1rem .8rem; border-top: 1px solid #F0F2F5; }
+        .salary-intel-action .stButton > button { min-height: 2.25rem; }
+
+        /* Team composition */
+        .team-left-stack { display: flex; flex-direction: column; gap: .8rem; }
+        .team-condition-card { padding: 1rem; }
+        .team-condition-card .reference-card-title { margin-bottom: .8rem; }
+        .st-key-team-condition-card,
+        .st-key-team-condition-levels,
+        .st-key-team-simulation-card,
+        .st-key-team-scatter-card,
+        .st-key-team-radar-card {
+            padding: .9rem 1rem; border: 1px solid #E7EAF0; border-radius: 14px;
+            background: #FFFFFF; box-shadow: 0 1px 3px rgba(15,23,42,.10);
+        }
+        .st-key-team-condition-card { border-bottom: 0; border-radius: 14px 14px 0 0; padding-bottom: .35rem; }
+        .st-key-team-condition-levels { margin-top: -1px; border-radius: 0 0 14px 14px; padding-top: .2rem; }
+        .st-key-team-condition-card [data-testid="stVerticalBlock"],
+        .st-key-team-condition-levels [data-testid="stVerticalBlock"] { gap: .55rem; }
+        .st-key-team-simulation-card { margin-top: .75rem; }
+        .st-key-team-scatter-card, .st-key-team-radar-card { min-height: 255px; padding-bottom: .2rem; }
+        .st-key-team-scatter-card [data-testid="stPlotlyChart"],
+        .st-key-team-radar-card [data-testid="stPlotlyChart"] { border: 0; box-shadow: none; }
+        .team-roster-card { margin-bottom: .7rem; }
+        .team-roster-head { padding: .85rem 1rem; border-bottom: 1px solid #F2F4F7; }
+        .team-table { width: 100%; border-collapse: collapse; font-size: .67rem; }
+        .team-table th { padding: .62rem 1rem; color: #98A2B3; font-weight: 500; text-align: left; }
+        .team-table td { padding: .72rem 1rem; border-top: 1px solid #F2F4F7; color: #344054; }
+        .team-table td:first-child { color: #182033; font-weight: 700; }
+        .team-role { color: #155EEF !important; }
+        .risk-chip { display: inline-block; padding: .15rem .45rem; border-radius: 999px; font-size: .58rem; font-weight: 700; }
+        .risk-chip.safe { color: #079455; background: #ECFDF3; }
+        .risk-chip.warning { color: #DC6803; background: #FFFAEB; }
+        .risk-chip.danger { color: #D92D20; background: #FEF3F2; }
+        .team-chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; margin-top: .7rem; }
+        .team-chart-card { min-height: 240px; padding: .85rem 1rem; }
+
+        /* Actions and stability */
+        .st-key-actions-filter-row { margin-top: .75rem; }
+        .st-key-actions-filter-row [data-testid="stHorizontalBlock"] { align-items: end; }
+        .st-key-actions-filter-row [data-testid="stVerticalBlock"] { gap: .15rem; }
+        .st-key-subtabbar-hr_actions_tab { margin-top:.55rem; padding:0; border-bottom:1px solid #EAECF0; border-radius:0; background:transparent; }
+        .st-key-subtabbar-hr_actions_tab .stButton > button { min-height:2.25rem; border-radius:9px 9px 0 0; font-size:.68rem; }
+        .st-key-subtabbar-hr_actions_tab .stButton > button[kind="primary"] { background:#2563EB; color:#FFF; }
+        .st-key-actions-table .stDataFrame { border: 1px solid #E7EAF0; border-radius: 14px; overflow: hidden; }
+        .st-key-actions-table [data-testid="stDataFrame"] { font-size: .68rem; }
+        [data-testid="stDataFrame"] { border:1px solid #E7EAF0; border-radius:14px; overflow:hidden; box-shadow:0 1px 3px rgba(15,23,42,.08); }
+        .health-score-card { padding: 1.1rem; text-align: center; }
+        .health-score-label { color: #98A2B3; font-size: .59rem; font-weight: 600; text-transform: uppercase; }
+        .health-score-value { margin: .2rem 0; color: #111827; font-size: 3.65rem; font-weight: 800; line-height: 1; }
+        .health-score-note { margin-top: .55rem; color: #98A2B3; font-size: .56rem; }
+        .health-driver-card { margin-top: .75rem; padding: .95rem 1rem; }
+        .st-key-health-driver-card { margin-top: .75rem; padding: .95rem 1rem; border: 1px solid #E7EAF0; border-radius: 14px; background:#FFF; box-shadow:0 1px 3px rgba(15,23,42,.10); }
+        .st-key-health-driver-card [data-testid="stVerticalBlock"] { gap: .2rem; }
+        .health-driver-card .hbar-chart { padding: .65rem 0 0; border: 0; box-shadow: none; }
+        .st-key-health-driver-card .hbar-chart { padding: .5rem 0 0; border: 0; box-shadow: none; }
+        div[data-testid="stRadio"] { margin: .55rem 0 .2rem; }
+        div[data-testid="stRadio"] > label { color:#98A2B3; font-size:.6rem; }
+        div[data-testid="stRadio"] [role="radiogroup"] { gap:.35rem; }
+        div[data-testid="stRadio"] [role="radiogroup"] label { padding:.18rem .55rem; border-radius:999px; background:#F2F4F7; font-size:.6rem; }
+        .health-dept-filter { display: flex; align-items: center; gap: .45rem; margin: .75rem 0; }
+        .health-trend-card { padding: .9rem 1rem 1rem; }
+        .health-trend-bars { height: 105px; display: flex; align-items: end; gap: .55rem; margin-top: .7rem; }
+        .health-trend-item { flex: 1; display: flex; height: 100%; flex-direction: column; justify-content: end; align-items: center; gap: .25rem; }
+        .health-trend-value, .health-trend-year { color: #667085; font-size: .58rem; }
+        .health-trend-bar { width: 100%; min-height: 8px; border-radius: 6px 6px 0 0; background: linear-gradient(180deg,#60A5FA,#2563EB); }
+
+        div.st-key-salary-sim-fab, div.st-key-team-swap-fab { position: static !important; inset: auto !important; width: auto !important; }
+        div.st-key-salary-sim-fab .stButton > button, div.st-key-team-swap-fab .stButton > button {
+            min-height: 2.15rem; border: 1px solid #B9D2FF; border-radius: 9px;
+            padding: .35rem .75rem; background: #FFFFFF !important; border-color:#B9D2FF !important;
+            color: #155EEF !important; box-shadow: none !important; font-size: .65rem;
+        }
+
+        @media (max-width: 760px) {
+            .block-container { width: min(calc(100vw - 20px), 1024px); }
+            .st-key-workspace-navigation { padding-inline: 10px; }
+            .workspace-status { display: none; }
+            .stat-card-grid { display: grid; grid-template-columns: 1fr 1fr; }
+            .stat-card { min-height: 70px; }
+            .stat-card:nth-child(2) { border-right: 0; }
+            .stat-card:nth-child(-n+2) { border-bottom: 1px solid var(--line-soft); }
+            div[class*="st-key-tabbar-"] { bottom: 10px; width: calc(100vw - 20px); }
+            div[class*="st-key-tabbar-"] .stButton > button { padding-inline: .25rem; font-size: .64rem; }
+            .role-card { min-height: 0; }
+            .reference-grid-2, .salary-intel-body, .team-chart-grid { grid-template-columns: 1fr; }
+            .salary-risk-column, .salary-radar-column { border-right: 0; border-bottom: 1px solid #F0F2F5; }
+            .reference-kpis { grid-template-columns: 1fr; }
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def page_header(tag: str, title: str, description: str) -> None:
@@ -834,6 +1277,49 @@ def top_navigation(role: str | None = None) -> None:
             """,
             unsafe_allow_html=True,
         )
+
+
+def workspace_navigation(role: str) -> None:
+    """워크스페이스 전용 iOS 헤더: 역할 전환·상태·나가기 기능을 제공한다."""
+
+    with st.container(key="workspace-navigation"):
+        brand_col, hr_col, admin_col, status_col, exit_col = st.columns(
+            [2.7, .72, .72, 1.55, .68],
+            vertical_alignment="center",
+        )
+        with brand_col:
+            st.markdown('<div class="workspace-brand">STAYON</div>', unsafe_allow_html=True)
+        with hr_col:
+            if st.button(
+                "HR TEAM",
+                key="workspace_role_hr",
+                type="primary" if role == "hr" else "secondary",
+                width="stretch",
+            ):
+                st.session_state["role"] = "hr"
+                if st.session_state.get("workspace_tab") == "models":
+                    st.session_state["workspace_tab"] = "salary"
+                st.rerun()
+        with admin_col:
+            if st.button(
+                "ADMIN",
+                key="workspace_role_admin",
+                type="primary" if role == "admin" else "secondary",
+                width="stretch",
+            ):
+                st.session_state["role"] = "admin"
+                st.session_state["workspace_tab"] = "models"
+                st.rerun()
+        with status_col:
+            st.markdown(
+                '<div class="workspace-status">SYSTEM OPERATIONAL</div>',
+                unsafe_allow_html=True,
+            )
+        with exit_col:
+            if st.button("← 나가기", key="workspace-exit", type="secondary", width="stretch"):
+                st.session_state["role"] = None
+                st.session_state["workspace_tab"] = "salary"
+                st.switch_page("main.py")
 
 
 def home_button() -> None:
@@ -1141,7 +1627,7 @@ def giant_stat(value: str, label: str, unit: str = "", tone: str = "ink") -> Non
     tone: "ink"(기본) | "safe" | "info" | "warning" | "danger" — 값 색상을 톤에 맞춘다.
     """
 
-    color = "var(--ink)" if tone == "ink" else f"var(--tone-color)"
+    color = "var(--ink)" if tone == "ink" else "var(--tone-color)"
     tone_wrap = "" if tone == "ink" else f'tone-{tone}'
     unit_html = f'<span class="giant-stat-unit">{_esc(unit)}</span>' if unit else ""
     st.markdown(

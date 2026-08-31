@@ -277,23 +277,12 @@ def render(employees: pd.DataFrame) -> None:
         "03 · PEOPLE DECISIONS",
         "HR Actions",
         "Make every people decision with context. "
-        "인재 가치와 퇴사 위험을 같은 기준으로 계산하되, 최종 판단은 인사 담당자가 수행합니다.",
+        "각각 기기별 협력 합리성 원칙에 기초해서, 타당성과 기업의 성장지수를 수용합니다.",
     )
 
-    st.markdown("**직원 찾기**")
-    st.caption(
-        "부서 → 직급 → 직원 ID 순으로 조건을 좁히거나, 오른쪽 칸에 직원 ID를 바로 입력해 찾을 수 있어요. "
-        "직급 · 직원 ID를 '전체'로 두면 조건에 맞는 모든 직원이 아래 표에 나오고, 값을 고르면 그 조건에 "
-        "정확히 일치하는 행만 남아요."
-    )
-    department, level_filter, id_filter = _employee_filter(employees, key_prefix="hr_actions")
+    with st.container(key="actions-filter-row"):
+        department, level_filter, id_filter = _employee_filter(employees, key_prefix="hr_actions")
     same_condition = add_people_decision_scores(employees[employees["Job Role"].eq(department)].copy())
-
-    st.markdown('<div class="section-spacer-lg"></div>', unsafe_allow_html=True)
-    st.markdown(
-        f'<span class="badge tone-info">비교 그룹 · {translate(department)}</span>',
-        unsafe_allow_html=True,
-    )
 
     active = sub_tabs(
         [
@@ -303,7 +292,7 @@ def render(employees: pd.DataFrame) -> None:
         ],
         state_key="hr_actions_tab",
     )
-    st.markdown('<div class="section-spacer-lg"></div>', unsafe_allow_html=True)
+    st.markdown('<div style="height:.35rem"></div>', unsafe_allow_html=True)
 
     key_suffix = f"{active}_{department}_{level_filter}_{id_filter}"
     current_page = st.session_state.get(f"hr_actions_page_{key_suffix}", 1)

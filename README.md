@@ -112,9 +112,9 @@ Workspace(`pages/01_Workspace.py`)는 5개의 탭(`src/views/tab_*.py`)으로 �
 
 ### 05 · Model Performance (`src/views/tab_models.py`, 관리자 전용)
 
-기술개발팀·관리자만 접근할 수 있는 화면으로, ML 4종과 DL(MLP) 모델의 성능을 비교하고 모델 선정 근거를 보여줍니다.
+기술개발팀·관리자만 접근할 수 있는 화면으로, ML 6종과 DL(MLP) 모델의 성능을 비교하고 모델 선정 근거를 보여줍니다.
 
-- ML 리더보드 카드: Logistic Regression, Random Forest, XGBoost, LightGBM 4개 모델의 Accuracy·Precision·Recall·F1·ROC-AUC·Average Precision과 혼동행렬(TN/FP/FN/TP)을 비교합니다(`MODEL_ORDER`, Gradient Boosting은 학습 리더보드에는 있으나 이 화면에는 표시되지 않습니다).
+- ML 리더보드 카드: DB의 `test_model_results`에서 Logistic Regression, Random Forest, XGBoost, LightGBM, Gradient Boosting, CatBoost 6개 모델을 조회해 Accuracy·Precision·Recall·F1·ROC-AUC·Average Precision과 혼동행렬(TN/FP/FN/TP)을 비교합니다.
 - DL(MLP) 성능 카드와 ML-vs-DL Big Number 비교(ROC-AUC 우세 모델을 동적으로 계산)를 제공합니다.
 - "학습 근거" 섹션은 ML 내부 순위에는 ROC-AUC와 F1을, HR 운영 모델 선정에는 Recall을 우선한다는 기준을 안내합니다.
 

@@ -1,8 +1,8 @@
 """05 · 모델 성능 평가 탭 (기술개발팀·관리자 전용).
 
-ML 4종과 DL(MLP)의 성능을 같은 화면에서 비교하고, 어떤 근거로 최종 모델을 골랐는지
+ML 6종과 DL(MLP)의 성능을 같은 화면에서 비교하고, 어떤 근거로 최종 모델을 골랐는지
 (하이퍼파라미터, 리더보드) 함께 보여준다. 인사팀 화면에는 노출하지 않는다. 표·통계
-카드·단순 막대 그래프는 커스텀 HTML/CSS로 그리고, 모델 4~5개 × 지표 4개를 한번에
+카드·단순 막대 그래프는 커스텀 HTML/CSS로 그리고, 모델 6개 × 지표 4개를 한번에
 겹쳐 보는 복합 비교 차트만 Plotly를 사용한다.
 """
 
@@ -15,6 +15,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
+from src.data.loader import load_test_model_results_from_db
 from streamlit_ui import (
     alert_box,
     model_card_grid,
@@ -26,17 +27,16 @@ from streamlit_ui import (
 )
 
 REPORTS_DIR = Path("artifacts/reports")
-ML_LEADERBOARD_PATH = REPORTS_DIR / "ml_leaderboard.csv"
-BEST_ML_TEST_METRICS_PATH = REPORTS_DIR / "best_ml_test_metrics.csv"
-DL_METRICS_PATH = REPORTS_DIR / "mlp_test_metrics.csv"
 TUNED_PARAM_PATHS = {
+    "CatBoost": REPORTS_DIR / "catboost_tuned_params.json",
     "LightGBM": REPORTS_DIR / "lightgbm_tuned_params.json",
     "Random Forest": REPORTS_DIR / "random_forest_tuned_params.json",
     "XGBoost": REPORTS_DIR / "xgboost_tuned_params.json",
 }
 
-MODEL_ORDER = ["logistic_regression", "random_forest", "xgboost", "lightgbm"]
 MODEL_LABELS = {
+    "catboost": "CatBoost",
+    "gradient_boosting": "Gradient Boosting",
     "logistic_regression": "Logistic Regression",
     "random_forest": "Random Forest",
     "xgboost": "XGBoost",
@@ -53,10 +53,17 @@ METRIC_LABELS = {
 }
 
 
-@st.cache_data
-def _load_csv(path: str, modified_time: float) -> pd.DataFrame:
-    del modified_time
-    return pd.read_csv(path)
+@st.cache_data(ttl=30)
+def _load_model_results() -> pd.DataFrame:
+    return load_test_model_results_from_db()
+
+
+def _load_model_results_or_alert() -> pd.DataFrame | None:
+    try:
+        return _load_model_results()
+    except Exception as exc:  # noqa: BLE001
+        alert_box("danger", f"DB에서 모델 성능을 불러오지 못했습니다: {exc}")
+        return None
 
 
 def _hex_to_rgba(hex_color: str, alpha: float) -> str:
@@ -79,23 +86,22 @@ def _chart_type_picker(label: str, options: list[str], key: str) -> str:
 
 
 def _render_ml_comparison() -> None:
-    if not ML_LEADERBOARD_PATH.exists():
-        alert_box("warning", "머신러닝 성능 보고서가 없습니다: artifacts/reports/ml_leaderboard.csv")
+    results = _load_model_results_or_alert()
+    if results is None:
         return
 
-    leaderboard = _load_csv(str(ML_LEADERBOARD_PATH), ML_LEADERBOARD_PATH.stat().st_mtime)
+    leaderboard = results[results["model"].astype(str).str.lower() != "mlp"].copy()
     required_columns = {"model", *METRIC_LABELS}
     missing_columns = required_columns.difference(leaderboard.columns)
     if missing_columns:
         alert_box("danger", f"머신러닝 보고서에 필요한 항목이 없습니다: {', '.join(sorted(missing_columns))}")
         return
 
-    leaderboard = leaderboard[leaderboard["model"].isin(MODEL_ORDER)].copy()
     if leaderboard.empty:
         alert_box("warning", "비교할 머신러닝 모델 결과가 없습니다.")
         return
 
-    leaderboard["모델"] = leaderboard["model"].map(MODEL_LABELS)
+    leaderboard["모델"] = leaderboard["model"].map(MODEL_LABELS).fillna(leaderboard["model"])
     leaderboard["버전"] = leaderboard["artifact_path"].fillna("").apply(
         lambda p: "옵튜나 튜닝" if "_tuned.joblib" in str(p) else "기본"
     )
@@ -136,7 +142,7 @@ def _render_ml_comparison() -> None:
 
     st.markdown("**핵심 지표 비교**")
     chart_metrics = ["정확도", "F1 점수", "ROC 곡선 면적", "정밀도-재현율 곡선 면적"]
-    colors = ["#0071E3", "#5E5CE6", "#32ADE6", "#6E6E73", "#98989D"]
+    colors = ["#0071E3", "#5E5CE6", "#32ADE6", "#34C759", "#FF9500", "#AF52DE"]
     series = [
         (f"{row['모델']} · {row['버전']}", [float(row[m]) for m in chart_metrics], color)
         for (_, row), color in zip(display.iterrows(), colors, strict=False)
@@ -260,11 +266,14 @@ def _render_ml_comparison() -> None:
 
 
 def _render_dl_performance() -> None:
-    if not DL_METRICS_PATH.exists():
-        alert_box("info", "아직 `artifacts/reports/mlp_test_metrics.csv`가 없어요. MLP 학습이 끝난 뒤 자동으로 나타납니다.")
+    results = _load_model_results_or_alert()
+    if results is None:
         return
 
-    report = _load_csv(str(DL_METRICS_PATH), DL_METRICS_PATH.stat().st_mtime)
+    report = results[results["model"].astype(str).str.lower() == "mlp"].copy()
+    if report.empty:
+        alert_box("info", "DB에 MLP 테스트 성능이 없습니다.")
+        return
     required_columns = {"model", "accuracy", "precision", "recall", "f1", "roc_auc"}
     missing_columns = required_columns.difference(report.columns)
     if missing_columns:
@@ -384,13 +393,16 @@ def _render_dl_performance() -> None:
 
 
 def _render_ml_vs_dl() -> None:
-    missing_files = [str(p) for p in (BEST_ML_TEST_METRICS_PATH, DL_METRICS_PATH) if not p.exists()]
-    if missing_files:
-        alert_box("warning", "비교에 필요한 리포트가 없습니다: " + ", ".join(missing_files))
+    results = _load_model_results_or_alert()
+    if results is None:
         return
 
-    ml_report = _load_csv(str(BEST_ML_TEST_METRICS_PATH), BEST_ML_TEST_METRICS_PATH.stat().st_mtime)
-    dl_report = _load_csv(str(DL_METRICS_PATH), DL_METRICS_PATH.stat().st_mtime)
+    is_mlp = results["model"].astype(str).str.lower() == "mlp"
+    ml_report = results[~is_mlp].copy()
+    dl_report = results[is_mlp].copy()
+    if ml_report.empty or dl_report.empty:
+        alert_box("warning", "DB에 ML 또는 MLP 비교 결과가 없습니다.")
+        return
     required = {"model", *METRIC_LABELS}
     if not required.issubset(ml_report.columns) or not required.issubset(dl_report.columns):
         alert_box("danger", "머신러닝 또는 딥러닝 보고서에 비교 지표가 부족합니다.")

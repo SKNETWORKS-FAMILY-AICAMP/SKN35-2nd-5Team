@@ -189,6 +189,69 @@ def load_processed_test_from_db() -> pd.DataFrame:
     return _load_processed_from_db("test")
 
 
+def load_test_model_results_from_db() -> pd.DataFrame:
+    """``test_model_results``의 ML/DL 성능을 화면용 컬럼명으로 조회한다."""
+
+    connection = _get_db_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT
+                    model,
+                    accuracy_score,
+                    precision_score,
+                    recall_score,
+                    f1_score,
+                    roc_auc_score,
+                    average_precision_score,
+                    tn,
+                    fp,
+                    fn,
+                    tp,
+                    artifact_path
+                FROM test_model_results
+                ORDER BY roc_auc_score DESC, f1_score DESC, id ASC
+                """
+            )
+            rows = cursor.fetchall()
+            columns = [description[0] for description in cursor.description]
+    finally:
+        connection.close()
+
+    if not rows:
+        raise ValueError(
+            "test_model_results 테이블이 비어 있습니다. "
+            "먼저 `uv run python insert_database.py`를 실행하세요."
+        )
+
+    results = pd.DataFrame(rows, columns=columns)
+    results = results.rename(
+        columns={
+            "accuracy_score": "accuracy",
+            "precision_score": "precision",
+            "recall_score": "recall",
+            "f1_score": "f1",
+            "roc_auc_score": "roc_auc",
+            "average_precision_score": "average_precision",
+        }
+    )
+    metric_columns = (
+        "accuracy",
+        "precision",
+        "recall",
+        "f1",
+        "roc_auc",
+        "average_precision",
+    )
+    for column in metric_columns:
+        results[column] = pd.to_numeric(results[column], errors="raise").astype(float)
+    for column in ("tn", "fp", "fn", "tp"):
+        results[column] = pd.to_numeric(results[column], errors="raise").astype(int)
+
+    return results
+
+
 def split_processed_features_target(
     data: pd.DataFrame,
 ) -> tuple[pd.DataFrame, pd.Series]:

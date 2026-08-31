@@ -6,7 +6,6 @@
 """
 
 import streamlit as st
-import streamlit.components.v1 as components
 
 from streamlit_ui import apply_page_style
 
@@ -74,7 +73,7 @@ with right:
                 </div>
                 <ul class="role-card-points">
                     <li>인사팀 화면 전체 열람 가능</li>
-                    <li>ML 4종 · DL(MLP) 성능 비교</li>
+                    <li>ML 6종 · DL(MLP) 성능 비교</li>
                     <li>최종 모델 선정 근거 · 튜닝 하이퍼파라미터</li>
                     <li>퇴사율 측정에 사용한 학습 기준 확인</li>
                 </ul>
@@ -84,7 +83,7 @@ with right:
         )
         if st.button("Admin으로 시작하기", key="role_admin_btn", type="primary", width="stretch"):
             st.session_state["role"] = "admin"
-            st.session_state["workspace_tab"] = "salary"
+            st.session_state["workspace_tab"] = "models"
             st.switch_page("pages/01_Workspace.py")
 
 # 두 카드 높이 맞추기: Streamlit이 컬럼 내부를 여러 겹의 flex/block 래퍼로 감싸는
@@ -93,7 +92,7 @@ with right:
 # 맞출 수 없었다. 대신 렌더 후 실제 카드 높이를 JS로 측정해서 더 큰 쪽에 맞춰
 # min-height를 직접 지정한다. 화면 폭이 바뀌어 줄바꿈 수가 달라져도 resize 때마다
 # 다시 계산하므로 항상 두 "시작하기" 버튼이 같은 줄에 나란히 놓인다.
-components.html(
+st.html(
     """
     <script>
     function equalizeRoleCards() {
@@ -114,7 +113,7 @@ components.html(
     }
     </script>
     """,
-    height=0,
+    unsafe_allow_javascript=True,
 )
 
 st.markdown(

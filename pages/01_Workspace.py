@@ -26,6 +26,7 @@ from streamlit_ui import (
     page_header,
     stat_cards,
     top_navigation,
+    workspace_navigation,
 )
 
 st.set_page_config(page_title="HR Workspace · STAYON", layout="wide")
@@ -49,14 +50,16 @@ if role not in ("hr", "admin"):
         st.switch_page("main.py")
     st.stop()
 
-top_navigation(role)
+workspace_navigation(role)
 
 ROLE_LABELS = {"hr": "인사팀", "admin": "기술개발팀 · 관리자"}
-page_header(
-    "INTERNAL PEOPLE INTELLIGENCE",
-    "HR Workspace",
-    f"{ROLE_LABELS[role]} 모드로 접속했어요. 아래 버튼으로 원하는 업무 화면을 바로 전환할 수 있어요.",
-)
+with st.container(key="workspace-page-header"):
+    st.markdown(
+        '<h1 class="workspace-page-title">HR Workspace</h1>'
+        f'<p class="workspace-page-desc">{ROLE_LABELS[role]} 모드로 접속했어요. '
+        '아래 버튼으로 원하는 업무화면을 바로 전환할 수 있어요.</p>',
+        unsafe_allow_html=True,
+    )
 
 MODEL_PATHS = (
     MLP_MODEL_PATH,
@@ -122,13 +125,13 @@ stat_cards(
 )
 
 TAB_OPTIONS = [
-    ("salary", "01 Salary"),
-    ("team", "02 Team"),
-    ("actions", "03 HR Actions"),
-    ("stability", "04 Stability"),
+    ("salary", "◎  연봉협상"),
+    ("team", "♙  팀 구성"),
+    ("actions", "▣  인사 지원"),
+    ("stability", "◇  안정도"),
 ]
 if role == "admin":
-    TAB_OPTIONS.append(("models", "05 Models"))
+    TAB_OPTIONS.append(("models", "⊞  모델"))
 
 st.session_state.setdefault("workspace_tab", "salary")
 if st.session_state["workspace_tab"] not in {key for key, _ in TAB_OPTIONS}:
@@ -147,8 +150,6 @@ with st.container(key="tabbar-workspace"):
             ):
                 st.session_state["workspace_tab"] = key
                 st.rerun()
-
-st.markdown('<div class="section-divider-thin"></div>', unsafe_allow_html=True)
 
 active_tab = st.session_state["workspace_tab"]
 if active_tab == "salary":

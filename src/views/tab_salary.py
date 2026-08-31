@@ -10,14 +10,15 @@ Action Button을 눌러 모달(st.dialog)로 열람하는 방식으로 제공한
 
 from __future__ import annotations
 
+import html
+import math
+
 import pandas as pd
 import streamlit as st
 
 from src.data.prediction import attrition_probability, prepare_model_input
 from src.utils.hr_metrics import (
     FEATURE_LABELS,
-    RISK_FEATURES,
-    TALENT_FEATURE_LABELS,
     nice_wheel_options,
     risk_badge_tone,
     risk_label,
@@ -25,11 +26,8 @@ from src.utils.hr_metrics import (
 )
 from streamlit_ui import (
     alert_box,
-    employee_hero,
     employee_picker,
-    feature_pills,
     hbar_chart,
-    render_table,
     section_heading,
     stat_cards,
 )
@@ -44,6 +42,81 @@ SIMULATION_FEATURES = [
     "Job Level",
     "Remote Work",
 ]
+
+
+def _score_items(employee: pd.Series) -> list[tuple[str, str, float]]:
+    """레퍼런스의 8축 패널에 실제 직원 값을 0~100 점수로 환산한다."""
+
+    level_score = {"Entry": 25, "Mid": 55, "Senior": 78, "Manager": 92}.get(
+        str(employee.get("Job Level", "")), 50
+    )
+    tenure_score = min(100.0, float(employee.get("Years at Company", 0)) / 30 * 100)
+    return [
+        ("학력", "학력 전문성", float(employee.get("학력 점수", 50))),
+        ("성과평가", "최근 성과 점수", float(employee.get("성과 점수", 50))),
+        ("회사평판", "기업 만족도", float(employee.get("평판 점수", 50))),
+        ("재직기간", "재직 기간", float(employee.get("경력 점수", 50))),
+        ("리더십기회", "성장 기회", float(employee.get("리더십 점수", 50))),
+        ("근무연수", "누적 근속", tenure_score),
+        ("직급수준", "현재 직급", float(level_score)),
+        ("직원인정", "조직 내 인정도", float(employee.get("인정 점수", 50))),
+    ]
+
+
+def _radar_svg(items: list[tuple[str, str, float]]) -> str:
+    cx, cy, radius, count = 150.0, 132.0, 76.0, len(items)
+
+    def point(index: int, distance: float) -> tuple[float, float]:
+        angle = math.radians(index * 360 / count - 90)
+        return cx + distance * math.cos(angle), cy + distance * math.sin(angle)
+
+    rings = []
+    for level in (0.25, 0.5, 0.75, 1.0):
+        points = " ".join(f"{x:.1f},{y:.1f}" for x, y in (point(i, radius * level) for i in range(count)))
+        rings.append(f'<polygon points="{points}" fill="none" stroke="#E4EAF2" stroke-width="1"/>')
+    axes = "".join(
+        f'<line x1="{cx}" y1="{cy}" x2="{x:.1f}" y2="{y:.1f}" stroke="#E4EAF2" stroke-width="1"/>'
+        for x, y in (point(i, radius) for i in range(count))
+    )
+    data_points = [point(i, radius * max(0, min(100, item[2])) / 100) for i, item in enumerate(items)]
+    polygon = " ".join(f"{x:.1f},{y:.1f}" for x, y in data_points)
+    dots = "".join(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="2.6" fill="#EF4444"/>' for x, y in data_points)
+    labels = []
+    for i, (label, _, _) in enumerate(items):
+        x, y = point(i, radius + 23)
+        labels.append(
+            f'<text x="{x:.1f}" y="{y:.1f}" text-anchor="middle" dominant-baseline="middle" '
+            f'font-size="9" fill="#667085">{html.escape(label)}</text>'
+        )
+    return (
+        '<svg viewBox="0 0 300 265" width="100%" height="238" aria-label="역량 방사형 분석">'
+        + "".join(rings)
+        + axes
+        + f'<polygon points="{polygon}" fill="rgba(239,68,68,.12)" stroke="#EF4444" stroke-width="1.5"/>'
+        + dots
+        + "".join(labels)
+        + "</svg>"
+    )
+
+
+def _gauge_svg(value: float) -> str:
+    value = max(0.0, min(100.0, value))
+    circumference = math.pi * 46
+    filled = circumference * value / 100
+    color = "#EF4444" if value >= 60 else "#F59E0B" if value >= 35 else "#22C55E"
+    return f"""
+    <svg viewBox="0 0 132 83" width="132" height="83" aria-label="퇴사 위험도 {value:.0f}">
+      <path d="M20 65 A46 46 0 0 1 112 65" fill="none" stroke="#E8EDF4" stroke-width="10" stroke-linecap="round"/>
+      <path d="M20 65 A46 46 0 0 1 112 65" fill="none" stroke="{color}" stroke-width="10" stroke-linecap="round"
+            stroke-dasharray="{filled:.1f} {circumference + 10:.1f}"/>
+      <text x="66" y="57" text-anchor="middle" font-size="22" font-weight="800" fill="{color}">{value:.0f}</text>
+      <text x="66" y="70" text-anchor="middle" font-size="7.5" fill="#98A2B3">이탈 위험도</text>
+    </svg>
+    """
+
+
+def _feature_color(value: float) -> str:
+    return "#22C55E" if value >= 70 else "#F59E0B" if value >= 40 else "#EF4444"
 
 
 def _wheel_picker(label: str, options: list[int | float], current: int | float, key: str, is_categorical: bool):
@@ -134,8 +207,7 @@ def render(employees: pd.DataFrame, train_data: pd.DataFrame, model) -> None:
     section_heading(
         "01 · COMPENSATION INTELLIGENCE",
         "Salary Intelligence",
-        "Protect high-value talent before they leave. "
-        "직원을 부서 → 직급 → ID 순으로 좁혀 선택하면, 퇴사 확률과 인재 가치 지수를 함께 확인할 수 있어요.",
+        "개별 직원 ID를 선택해 퇴사 위험과 인재 가치를 확인합니다.",
     )
 
     selected_id = employee_picker(employees, key_prefix="salary", with_direct_search=True)
@@ -146,49 +218,6 @@ def render(employees: pd.DataFrame, train_data: pd.DataFrame, model) -> None:
     employee = employees.loc[employees["Employee ID"].eq(selected_id)].iloc[0]
     risk = float(employee["prediction"])
     talent = float(employee["인재 가치 지수"])
-    label = risk_label(risk)
-    tone = risk_badge_tone(risk)
-
-    employee_hero(
-        employee_id=selected_id,
-        department=employee["Job Role"],
-        level=employee["Job Level"],
-        risk_pct=risk,
-        risk_label_text=label.upper(),
-        risk_tone=tone,
-        talent_score=talent,
-        extra_badges=[f"${float(employee['Monthly Income']):,.0f} / mo"],
-    )
-    st.markdown('<div class="section-spacer-lg"></div>', unsafe_allow_html=True)
-
-    left, right = st.columns(2)
-    with left:
-        st.markdown("**Current Profile · 퇴사 예측 활용 항목**")
-        feature_pills(RISK_FEATURES, FEATURE_LABELS)
-        risk_display = pd.DataFrame(
-            {
-                "항목": [FEATURE_LABELS[feature] for feature in RISK_FEATURES],
-                "현재 값": [translate(employee[feature]) for feature in RISK_FEATURES],
-            }
-        )
-        render_table(risk_display, widths={"항목": "42%", "현재 값": "58%"})
-    with right:
-        st.markdown("**Talent Value · 인재 가치 구성**")
-        feature_pills(list(TALENT_FEATURE_LABELS.keys()), FEATURE_LABELS)
-        hbar_chart(
-            [
-                ("학력", float(employee["학력 점수"])),
-                ("성과 평가", float(employee["성과 점수"])),
-                ("회사 평판", float(employee["평판 점수"])),
-                ("총 경력연수", float(employee["경력 점수"])),
-                ("리더십 기회", float(employee["리더십 점수"])),
-            ],
-            max_value=100,
-            color="var(--blue)",
-            # 왼쪽 "Current Profile" 표는 6행이라 오른쪽(5개 막대)보다 항상 더 길다.
-            # 막대 5개를 이 높이 안에 고르게 펼쳐서, 위쪽에만 몰려 보이지 않게 한다.
-            min_height="341px",
-        )
 
     if risk >= 0.6 and talent >= 70:
         message = "퇴사 위험과 인재 가치가 모두 높습니다. 보상 수준 및 성장 경로 면담을 우선 검토하세요."
@@ -196,9 +225,62 @@ def render(employees: pd.DataFrame, train_data: pd.DataFrame, model) -> None:
         message = "퇴사 위험이 높습니다. 보상 외 업무 만족도와 워라밸 요인을 함께 확인하세요."
     else:
         message = "현재 잔류 가능성이 비교적 안정적입니다. 성과와 역할 확장 가능성을 중심으로 협상하세요."
-    alert_box("info", message, title="협상 제안")
 
-    with st.container(key="salary-sim-fab"):
-        fab_clicked = st.button("＋ Simulate", key="salary_sim_fab_btn", help="What-if 시뮬레이션을 모달로 열어요")
+    score_items = _score_items(employee)
+    feature_rows = "".join(
+        (
+            '<div class="salary-feature">'
+            '<div class="salary-feature-name">'
+            f'<span><b>{html.escape(name)}</b><small>{html.escape(subtitle)}</small></span>'
+            f'<span style="color:{_feature_color(value)};font-weight:800">{value:.0f}</span>'
+            '</div><div class="salary-feature-track">'
+            f'<div class="salary-feature-fill" style="width:{max(0, min(100, value)):.1f}%;background:{_feature_color(value)}"></div>'
+            '</div></div>'
+        )
+        for name, subtitle, value in score_items
+    )
+    risk_pct = risk * 100
+    risk_color = _feature_color(100 - risk_pct)
+    risk_badge = "위험 — HIGH" if risk >= 0.6 else "주의 — MID" if risk >= 0.35 else "안전 — LOW"
+
+    with st.container(key="salary-intelligence-card"):
+        st.markdown(
+            f"""
+            <div class="salary-intel-head">
+              <div class="salary-intel-employee"><span class="reference-label">EMPLOYEE</span><span class="salary-intel-id">#{int(selected_id)}</span></div>
+              <div class="salary-intel-meta">
+                <span>부서 <b>{html.escape(translate(employee['Job Role']))}</b></span>
+                <span>직급 <b>{html.escape(translate(employee['Job Level']))}</b></span>
+                <span>연봉 <b>₩{float(employee['Monthly Income']):,.0f}/월</b></span>
+              </div>
+            </div>
+            <div class="salary-intel-body">
+              <div class="salary-risk-column">
+                <span class="reference-label">이탈 위험도</span>
+                <div class="salary-gauge">{_gauge_svg(risk_pct)}</div>
+                <div style="text-align:center;margin-top:-.25rem"><span class="risk-chip {'danger' if risk >= .6 else 'warning' if risk >= .35 else 'safe'}">{risk_badge}</span></div>
+                <div class="salary-talent-row"><span style="color:#667085">인재 가치</span><b style="color:{risk_color}">{talent:.0f}</b></div>
+                <div class="salary-ai-note"><b>AI 권고</b>{html.escape(message)}</div>
+              </div>
+              <div class="salary-radar-column">
+                <div class="reference-label">역량 방사형 분석</div>
+                <div class="reference-card-subtitle">8개 이탈 예측 피처 종합 분포</div>
+                <div class="salary-radar-wrap">{_radar_svg(score_items)}</div>
+              </div>
+              <div class="salary-feature-column">
+                <div><div class="reference-label">개별 피처 점수</div></div>
+                {feature_rows}
+              </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        with st.container(key="salary-sim-fab"):
+            fab_clicked = st.button(
+                "👩🏻‍💼 협상 제안 — 이 조건을 바꾸면 어떻게 될까요?",
+                key="salary_sim_fab_btn",
+                help="What-if 시뮬레이션을 모달로 열어요",
+                width="stretch",
+            )
     if fab_clicked:
         _scenario_dialog(employee, selected_id, train_data, model)
