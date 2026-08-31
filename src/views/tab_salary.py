@@ -210,7 +210,7 @@ def render(employees: pd.DataFrame, train_data: pd.DataFrame, model) -> None:
         "개별 직원 ID를 선택해 퇴사 위험과 인재 가치를 확인합니다.",
     )
 
-    selected_id = employee_picker(employees, key_prefix="salary", with_direct_search=True)
+    selected_id = employee_picker(employees, key_prefix="salary")
     if selected_id is None:
         alert_box("info", "선택한 조건에 해당하는 직원이 없어요. 부서 또는 직급을 바꿔보세요.")
         return
