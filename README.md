@@ -116,7 +116,7 @@ Workspace(`pages/01_Workspace.py`)는 5개의 탭(`src/views/tab_*.py`)으로 �
 
 - ML 리더보드 카드: Logistic Regression, Random Forest, XGBoost, LightGBM 4개 모델의 Accuracy·Precision·Recall·F1·ROC-AUC·Average Precision과 혼동행렬(TN/FP/FN/TP)을 비교합니다(`MODEL_ORDER`, Gradient Boosting은 학습 리더보드에는 있으나 이 화면에는 표시되지 않습니다).
 - DL(MLP) 성능 카드와 ML-vs-DL Big Number 비교(ROC-AUC 우세 모델을 동적으로 계산)를 제공합니다.
-- "학습 근거" 섹션에서 검증 ROC-AUC를 우선 기준, F1 점수를 보조 기준으로 최종 모델을 선정했다는 방법론을 안내합니다.
+- "학습 근거" 섹션은 ML 내부 순위에는 ROC-AUC와 F1을, HR 운영 모델 선정에는 Recall을 우선한다는 기준을 안내합니다.
 
 ## ML 파이프라인
 
@@ -216,7 +216,7 @@ Marital Status_Married, Marital Status_Single
 - 임계값 최적화(`find_best_threshold`): 검증셋에서 **재현율(Recall) ≥ 0.80** 제약을 만족하는 범위 내에서 정밀도(Precision)를 최대화하는 임계값을 탐색합니다. 현재 저장된 임계값은 `0.44`(`artifacts/reports/mlp_test_metrics.csv`).
 - 산출물: `artifacts/dl/mlp_model.pt`(가중치), `mlp_scaler.pkl`, `mlp_best_params.pkl`, `mlp_threshold.pkl`, `mlp_metadata.pkl`.
 
-> **참고**: 실제 Streamlit 서비스(`pages/01_Workspace.py`, `tab_salary.py`)의 직원별 실시간 예측은 저장된 **ML 모델**(`artifacts/ml/best_ml_model.joblib`)만 사용합니다. DL(MLP) 모델은 05번 탭(관리자 전용)의 ML-vs-DL 성능 비교에만 사용되며, 서비스의 실시간 예측 경로에는 포함되어 있지 않습니다.
+> **참고**: 실제 Streamlit 서비스(`pages/01_Workspace.py`, `tab_salary.py`)의 직원별 실시간 예측은 Recall이 가장 높은 **DL(MLP)** 모델을 사용합니다. `artifacts/dl`의 가중치·전처리기·임계값·메타데이터를 하나의 추론 파이프라인으로 불러옵니다. 기존 직원별 DB 예측 INSERT는 비활성화되어 있으며, `insert_database.py`는 ML/DL 테스트 성능만 저장합니다.
 
 ## 기술 스택
 
@@ -340,7 +340,8 @@ DB는 **MySQL**이며, `mysql-connector-python`(`src/database/db.py`)과 `pymysq
 | ------------------------------- | --------------------------------------------------- | ----------------------------------------------------------------------------- |
 | `employee_attrition_raw`        | 원본 train/test CSV를 `type` 컬럼으로 구분해 저장   | `src/database/send_db.py::insert_employee_attrition_raw`                      |
 | `employee_attrition_processed`  | `preprocess_pipeline`을 거친 train/test 데이터 저장 | `src/database/send_db.py::insert_employee_attrition_processed`                |
-| `employee_attrition_prediction` | 직원별 퇴사 확률(`employee_id`, `prediction`) 저장  | `src/data/prediction.py::INSERT_PREDICTION_SQL`, `src/data/insert_dataset.py` |
+| `employee_attrition_prediction` | 직원별 MLP 퇴사 확률 저장(함수 보존, 실행 비활성화)  | `src/data/insert_dataset.py`                                                  |
+| `test_model_results`            | ML 리더보드 전체와 MLP 테스트 성능 저장              | `src/data/insert_dataset.py`                                                  |
 
 - 정확한 컬럼 타입 등 테이블 스키마(DDL)는 저장소에서 확인할 수 없어 `N/A`로 남깁니다. 컬럼명 매핑은 `COLUMN_MAPPING`(`src/database/load_db.py`, `send_db.py`)에서 확인할 수 있습니다.
 - **중요**: 위에서 설명한 것처럼, 실행 중인 Streamlit 앱은 이 DB를 조회하지 않습니다. DB는 원본/전처리 데이터를 외부에 적재하고 예측 결과를 내보내는 별도의 배치성 경로입니다.
@@ -374,12 +375,12 @@ DB는 **MySQL**이며, `mysql-connector-python`(`src/database/db.py`)과 `pymysq
 
 | 모델                                 |   Accuracy |  Precision |     Recall |         F1 |    ROC-AUC | Average Precision |
 | ------------------------------------ | ---------: | ---------: | ---------: | ---------: | ---------: | ----------------: |
-| **LightGBM (Tuned, 최종 배포 모델)** | **0.7618** | **0.7482** | **0.7466** | **0.7474** | **0.8531** |        **0.8420** |
+| LightGBM (Tuned, ML 계열 1위)       | **0.7618** | **0.7482** | 0.7466     | 0.7474     | **0.8531** |        **0.8420** |
 | XGBoost (Tuned)                      |     0.7619 |     0.7475 |     0.7482 |     0.7478 |     0.8534 |            0.8428 |
 | Random Forest (Tuned)                |     0.7548 |     0.7311 |     0.7598 |     0.7452 |     0.8455 |            0.8319 |
-| MLP (DL, threshold=0.44)             |     0.7507 |     0.7044 |     0.8131 |     0.7549 |     0.8472 |            0.8339 |
+| **MLP (DL, HR 운영 모델)**           |     0.7507 |     0.7044 | **0.8131** | **0.7549** |     0.8472 |            0.8339 |
 
-- **최종 배포 모델**은 `artifacts/ml/best_ml_model.joblib`에 저장된 **LightGBM(Tuned)**이며, 이는 `src/utils/model_promotion.py`가 검증 ROC-AUC·F1 기준으로 전체 리더보드 1위 자격을 재확인한 뒤 승격한 모델입니다.
+- **HR 운영 모델**은 실제 퇴사자를 놓치지 않는 것을 우선하여 Recall이 가장 높은 **MLP**를 사용합니다. 관련 산출물은 `artifacts/dl`에 저장됩니다.
 - 테스트셋 기준으로는 XGBoost(Tuned)의 ROC-AUC(0.8534)가 LightGBM(Tuned, 0.8531)보다 근소하게 높지만, 저장된 최종 배포 아티팩트는 LightGBM(Tuned)입니다(`artifacts/reports/best_ml_test_metrics.csv` 기준 사실 그대로 기록).
 - ML(LightGBM Tuned)과 DL(MLP)을 비교하면 ROC-AUC는 ML이, F1과 Recall은 DL이 더 높습니다 — 두 모델의 트레이드오프는 `05 Model Performance` 탭의 ML-vs-DL 비교에서 확인할 수 있습니다.
 

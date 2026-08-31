@@ -401,20 +401,25 @@ def _render_ml_vs_dl() -> None:
     ml_name = MODEL_LABELS.get(str(best_ml["model"]), str(best_ml["model"]))
     dl_name = MODEL_LABELS.get(str(best_dl["model"]), str(best_dl["model"]).upper())
 
-    roc_delta = float(best_ml["roc_auc"] - best_dl["roc_auc"])
-    winner = ml_name if roc_delta >= 0 else dl_name
+    recall_delta = float(best_ml["recall"] - best_dl["recall"])
+    winner = ml_name if recall_delta >= 0 else dl_name
     versus_hero(
         ml_name,
-        f"{best_ml['roc_auc']:.4f}",
+        f"Recall {best_ml['recall']:.4f}",
         dl_name,
-        f"{best_dl['roc_auc']:.4f}",
+        f"Recall {best_dl['recall']:.4f}",
         winner=winner,
     )
     stat_cards(
         [
-            {"label": "머신러닝 1위", "value": ml_name, "hint": f"ROC {best_ml['roc_auc']:.4f}"},
-            {"label": "딥러닝", "value": dl_name, "hint": f"ROC {best_dl['roc_auc']:.4f}"},
-            {"label": "ROC 곡선 면적 우세 모델", "value": winner, "hint": f"차이 {abs(roc_delta):.4f}", "tone": "safe"},
+            {"label": "머신러닝 1위", "value": ml_name, "hint": f"Recall {best_ml['recall']:.4f}"},
+            {"label": "딥러닝", "value": dl_name, "hint": f"Recall {best_dl['recall']:.4f}"},
+            {
+                "label": "HR 운영 모델 · Recall 우선",
+                "value": winner,
+                "hint": f"차이 {abs(recall_delta):.4f}",
+                "tone": "safe",
+            },
         ]
     )
 
@@ -518,7 +523,11 @@ def _render_ml_vs_dl() -> None:
         )
     st.plotly_chart(overlay, width="stretch", config={"displayModeBar": False})
 
-    alert_box("info", "두 모델 모두 퇴사=1을 양성 클래스로 평가한 보고서일 때 가장 정확한 비교가 됩니다.")
+    alert_box(
+        "info",
+        "HR 운영은 실제 퇴사자를 놓치지 않는 Recall을 우선하여 MLP를 사용합니다. "
+        "ROC-AUC 등 다른 지표는 모델 성능 진단에 함께 참고합니다.",
+    )
 
 
 def _render_training_details() -> None:
@@ -549,7 +558,8 @@ def _render_training_details() -> None:
         <ul style="margin:0; padding-left:1.1rem; color:var(--muted); font-size:.9rem; line-height:1.7;">
             <li>학습 60% · 검증 20% · 최종 테스트 20%로 계층 분할, 동일 random seed 사용</li>
             <li>수치형은 중앙값 대치 후 표준화, 범주형은 최빈값 대치 후 원-핫 인코딩</li>
-            <li>검증 ROC-AUC를 우선 기준, F1 점수를 보조 기준으로 최종 모델 선정</li>
+            <li>ML 계열 내부 순위는 검증 ROC-AUC 우선, F1 점수를 보조 기준으로 선정</li>
+            <li>HR 운영 모델은 실제 퇴사자를 놓치지 않도록 ML·DL 중 Recall 최고 모델을 선정</li>
             <li>딥러닝(MLP)은 별도 스케일러·분류 임계값을 저장해 동일 조건으로 평가</li>
         </ul>
         """,

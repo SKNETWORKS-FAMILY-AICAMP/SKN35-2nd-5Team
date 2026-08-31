@@ -1,78 +1,163 @@
-"""CatBoost 단독 테스트 및 튜닝 스크립트 (파일 생성 없음)."""
+"""Optuna를 이용한 CatBoost 하이퍼파라미터 튜닝."""
 
-from pathlib import Path
-import pandas as pd
+import argparse
+from typing import Any
+
+import optuna
 from catboost import CatBoostClassifier
-from sklearn.model_selection import GridSearchCV, train_test_split
-from sklearn.metrics import classification_report, roc_auc_score
+from optuna.trial import Trial
+from sklearn.model_selection import StratifiedKFold, cross_val_score
+from sklearn.pipeline import Pipeline
 
-from .utils import RANDOM_STATE, TARGET_COLUMN
+from src.data.loader import load_processed_train_test_features
+from src.utils.artifact_io import save_tuned_ml_artifacts
+from src.utils.constants import RANDOM_STATE
+from src.utils.metrics import evaluate_sklearn_model
+from src.utils.ml_training import create_training_pipeline, make_train_validation_split
+from src.utils.model_promotion import promote_tuned_model
+from src.utils.paths import ML_ARTIFACTS_DIR, REPORTS_DIR
 
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
-TRAIN_DATA_PATH = PROJECT_ROOT / "data" / "preprocessing" / "train_processed.csv"
+CV_FOLDS = 3
+DEFAULT_TRIALS = 30
+DEFAULT_TIMEOUT = 600
+TUNED_MODEL_PATH = ML_ARTIFACTS_DIR / "catboost_tuned.joblib"
+TUNED_METRICS_PATH = REPORTS_DIR / "catboost_tuned_metrics.csv"
+TUNED_PARAMS_PATH = REPORTS_DIR / "catboost_tuned_params.json"
 
 
-def run_tuning():
-    """CatBoost 모델 튜닝 및 터미널 성과 측정."""
-    if not TRAIN_DATA_PATH.exists():
-        raise FileNotFoundError(f"전처리 데이터가 없습니다: {TRAIN_DATA_PATH}")
+def suggest_params(trial: Trial) -> dict[str, Any]:
+    """CatBoost 탐색 공간에서 한 개의 파라미터 조합을 생성한다."""
 
-    data = pd.read_csv(TRAIN_DATA_PATH)
-
-    # 타깃 및 피처 분리
-    y = pd.to_numeric(data[TARGET_COLUMN], errors="coerce").astype("int8")
-    saved_index_cols = [c for c in data.columns if c.startswith("Unnamed:")]
-    X = data.drop(columns=[TARGET_COLUMN, *saved_index_cols])
-
-    # bool 타입을 int8로 변환 및 원핫 인코딩
-    bool_cols = X.select_dtypes(include="bool").columns
-    X[bool_cols] = X[bool_cols].astype("int8")
-    X = pd.get_dummies(X, drop_first=True)
-
-    # 80:20 계층 분할
-    X_train, X_val, y_train, y_val = train_test_split(
-        X, y, test_size=0.20, random_state=RANDOM_STATE, stratify=y
-    )
-
-    print("🚀 [CatBoost] 단독 파인튜닝 탐색을 시작합니다...")
-
-    param_grid = {
-    "iterations": [400, 600],
-    "learning_rate": [0.03, 0.05],
-    "depth": [3, 4, 5],
-    "l2_leaf_reg": [1, 3, 5],  # 과적합 방지 규제항 추가
+    return {
+        "iterations": trial.suggest_int("iterations", 200, 800, step=100),
+        "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.2, log=True),
+        "depth": trial.suggest_int("depth", 3, 8),
+        "l2_leaf_reg": trial.suggest_float("l2_leaf_reg", 1.0, 10.0, log=True),
+        "random_strength": trial.suggest_float("random_strength", 0.0, 2.0),
+        "border_count": trial.suggest_categorical("border_count", [32, 64, 128]),
     }
 
-    base_model = CatBoostClassifier(
+
+def create_model(params: dict[str, Any]) -> CatBoostClassifier:
+    """공통 학습 파이프라인에서 사용할 CatBoost 분류기를 생성한다."""
+
+    return CatBoostClassifier(
+        loss_function="Logloss",
         eval_metric="AUC",
         random_seed=RANDOM_STATE,
-        verbose=0,
+        verbose=False,
+        allow_writing_files=False,
+        thread_count=-1,
+        **params,
     )
 
-    grid_search = GridSearchCV(
-        estimator=base_model,
-        param_grid=param_grid,
-        cv=3,
-        scoring="roc_auc",
-        n_jobs=-1,
-        verbose=1,
+
+def run_tuning(
+    n_trials: int = DEFAULT_TRIALS,
+    timeout: int | None = DEFAULT_TIMEOUT,
+) -> tuple[
+    Pipeline,
+    dict[str, float | int],
+    dict[str, float | int],
+    dict[str, Any],
+]:
+    """CatBoost를 튜닝하고 validation 및 최종 test 성능을 반환한다."""
+
+    features, target, test_features, test_target = load_processed_train_test_features()
+    train_features, valid_features, train_target, valid_target = make_train_validation_split(
+        features,
+        target,
+    )
+    cv = StratifiedKFold(
+        n_splits=CV_FOLDS,
+        shuffle=True,
+        random_state=RANDOM_STATE,
     )
 
-    grid_search.fit(X_train, y_train)
+    def objective(trial: Trial) -> float:
+        pipeline = create_training_pipeline(create_model(suggest_params(trial)), train_features)
+        scores = cross_val_score(
+            pipeline,
+            train_features,
+            train_target,
+            cv=cv,
+            scoring="roc_auc",
+            n_jobs=1,
+        )
+        return float(scores.mean())
 
-    best_model = grid_search.best_estimator_
-    
-    # 평가 수행
-    y_pred = best_model.predict(X_val)
-    y_proba = best_model.predict_proba(X_val)[:, 1]
+    study = optuna.create_study(
+        direction="maximize",
+        sampler=optuna.samplers.TPESampler(seed=RANDOM_STATE),
+    )
+    study.optimize(objective, n_trials=n_trials, timeout=timeout)
 
-    print("\n" + "=" * 50)
-    print("✨ CatBoost 최적 파라미터:", grid_search.best_params_)
-    print("=" * 50)
-    print(classification_report(y_val, y_pred))
-    print(f"🔥 ROC-AUC Score: {roc_auc_score(y_val, y_proba):.4f}")
-    print("=" * 50)
+    best_params = dict(study.best_params)
+    validation_model = create_training_pipeline(create_model(best_params), train_features)
+    validation_model.fit(train_features, train_target)
+    validation_metrics = evaluate_sklearn_model(
+        validation_model,
+        valid_features,
+        valid_target,
+    )
+
+    print(f"\nBest CV ROC-AUC : {study.best_value:.4f}")
+    print(f"Validation AUC   : {validation_metrics['roc_auc']:.4f}")
+    print("Best parameters:")
+    for name, value in best_params.items():
+        print(f"  {name}: {value}")
+
+    final_model = create_training_pipeline(create_model(best_params), features)
+    final_model.fit(features, target)
+    test_metrics = evaluate_sklearn_model(final_model, test_features, test_target)
+    return final_model, validation_metrics, test_metrics, best_params
+
+
+def main() -> None:
+    """터미널에서 CatBoost Optuna 튜닝을 실행한다."""
+
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--trials", type=int, default=DEFAULT_TRIALS)
+    parser.add_argument("--timeout", type=int, default=DEFAULT_TIMEOUT)
+    args = parser.parse_args()
+
+    model, validation_metrics, metrics, best_params = run_tuning(
+        n_trials=args.trials,
+        timeout=args.timeout,
+    )
+    save_tuned_ml_artifacts(
+        model,
+        TUNED_MODEL_PATH,
+        "catboost_tuned",
+        metrics,
+        TUNED_METRICS_PATH,
+        best_params,
+        TUNED_PARAMS_PATH,
+    )
+    _, promotion_message = promote_tuned_model(
+        "catboost",
+        model,
+        validation_metrics,
+        metrics,
+        TUNED_MODEL_PATH,
+    )
+
+    print("\nFinal Test")
+    print(f"Accuracy          : {metrics['accuracy']:.4f}")
+    print(f"Precision         : {metrics['precision']:.4f}")
+    print(f"Recall            : {metrics['recall']:.4f}")
+    print(f"F1-score          : {metrics['f1']:.4f}")
+    print(f"ROC-AUC           : {metrics['roc_auc']:.4f}")
+    print(f"Average Precision : {metrics['average_precision']:.4f}")
+    print(
+        f"TN={metrics['tn']:,} | FP={metrics['fp']:,} | "
+        f"FN={metrics['fn']:,} | TP={metrics['tp']:,}"
+    )
+    print(f"Saved model       : {TUNED_MODEL_PATH}")
+    print(f"Saved metrics     : {TUNED_METRICS_PATH}")
+    print(f"Saved parameters  : {TUNED_PARAMS_PATH}")
+    print(f"Promotion         : {promotion_message}")
 
 
 if __name__ == "__main__":
-    run_tuning()
+    main()
