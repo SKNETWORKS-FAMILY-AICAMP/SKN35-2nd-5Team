@@ -15,6 +15,8 @@
 
 </div>
 
+URL : https://skn35-2nd-5team-ghnprc4w4etel28hrqhdga.streamlit.app/  
+
 ---
 
 ## 👥 팀 소개
