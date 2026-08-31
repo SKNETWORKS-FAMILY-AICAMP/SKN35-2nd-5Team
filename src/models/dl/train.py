@@ -19,7 +19,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from torch.utils.data import DataLoader, TensorDataset
 
-from src.data.loader import load_processed_train
+from src.data.loader import load_processed_train_from_db
 from src.models.dl.mlp_model import MLPClassifier
 from src.utils.constants import RANDOM_STATE, VAL_SIZE
 from src.utils.paths import (
@@ -507,7 +507,8 @@ def main():
     print(" Deep Learning (MLP / Tabular ResNet) Training")
     print(f" Acceleration Device : {device}")
 
-    train_df = load_processed_train()
+    print("\n[ Data Source ] DB (employee_attrition_processed, type='train')")
+    train_df = load_processed_train_from_db()
 
     # 1. 하이퍼파라미터 최적화
     best_params = run_optuna_search(train_df, n_trials=150, epochs=40)
