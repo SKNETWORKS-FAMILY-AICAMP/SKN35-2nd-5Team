@@ -945,7 +945,8 @@ def _apply_ios_reference_overrides() -> None:
             position: fixed;
             left: 50%;
             bottom: 20px;
-            z-index: 998;
+            z-index: 2147483000 !important;
+            isolation: isolate;
             width: min(calc(100vw - 32px), 768px);
             transform: translateX(-50%);
             padding: 6px;
@@ -956,7 +957,15 @@ def _apply_ios_reference_overrides() -> None:
             -webkit-backdrop-filter: blur(36px) saturate(190%);
             box-shadow: 0 8px 32px rgba(15, 23, 42, .12), inset 0 1px 0 #FFFFFF;
         }
-        div[class*="st-key-tabbar-"] [data-testid="stHorizontalBlock"] { gap: 3px; }
+        div[class*="st-key-tabbar-"] [data-testid="stHorizontalBlock"] {
+            gap: 3px;
+            flex-wrap: nowrap !important;
+        }
+        div[class*="st-key-tabbar-"] [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {
+            flex: 1 1 0 !important;
+            width: auto !important;
+            min-width: 0 !important;
+        }
         div[class*="st-key-tabbar-"] .stButton > button {
             min-height: 3.65rem;
             border: 0;
@@ -964,6 +973,7 @@ def _apply_ios_reference_overrides() -> None:
             font-size: .72rem;
             font-weight: 650;
             line-height: 1.15;
+            white-space: nowrap;
         }
         div[class*="st-key-tabbar-"] .stButton > button[kind="primary"] {
             color: var(--blue);
@@ -973,6 +983,9 @@ def _apply_ios_reference_overrides() -> None:
         div[class*="st-key-tabbar-"] .stButton > button[kind="secondary"] {
             color: #8E8E93;
             background: transparent;
+        }
+        div[data-baseweb="popover"], div[data-baseweb="menu"] {
+            z-index: 2147482000 !important;
         }
 
         /* Compact iOS cards and controls */
@@ -1064,7 +1077,35 @@ def _apply_ios_reference_overrides() -> None:
         .st-key-workspace-navigation > div,
         .st-key-workspace-navigation [data-testid="stVerticalBlock"] { gap: 0 !important; }
         .st-key-workspace-navigation [data-testid="stHorizontalBlock"] { min-height: 32px; }
-        .workspace-brand { font-size: .7rem; letter-spacing: .13em; }
+        .st-key-workspace-navigation [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {
+            min-width: 0 !important;
+            width: auto !important;
+        }
+        .st-key-workspace-navigation [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:first-child {
+            flex: 1 1 auto !important;
+        }
+        .st-key-workspace-navigation [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(2),
+        .st-key-workspace-navigation [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:nth-child(3) {
+            flex: 0 0 42px !important;
+        }
+        .workspace-brand {
+            display:inline-flex; align-items:center; min-height:1.7rem;
+            color:#111827 !important; font-size:.7rem; font-weight:800;
+            letter-spacing:.13em; text-decoration:none !important;
+        }
+        .workspace-brand:hover { color:#2563EB !important; }
+        .st-key-workspace-navigation div[class*="st-key-workspace_role_hr"],
+        .st-key-workspace-navigation div[class*="st-key-workspace_role_admin"] {
+            position: absolute !important;
+            top: 7px;
+            z-index: 3;
+            width: 42px !important;
+            min-width: 42px !important;
+        }
+        .st-key-workspace-navigation div[class*="st-key-workspace_role_hr"] { right: 60px; }
+        .st-key-workspace-navigation div[class*="st-key-workspace_role_admin"] { right: 13px; }
+        .st-key-workspace-navigation div[class*="st-key-workspace_role_hr"] .stButton,
+        .st-key-workspace-navigation div[class*="st-key-workspace_role_admin"] .stButton { width:42px !important; }
         .workspace-status { font-size: .58rem; gap: .35rem; }
         .workspace-status::before { width: 6px; height: 6px; }
         .st-key-workspace-navigation .stButton > button {
@@ -1072,10 +1113,12 @@ def _apply_ios_reference_overrides() -> None:
             height: 1.7rem;
             padding: .15rem .55rem;
             font-size: .58rem;
+            min-width: 0;
+            white-space: nowrap;
         }
-        .st-key-workspace-page-header { margin: 0 0 .9rem; }
+        .st-key-workspace-page-header { margin: .65rem 0 1.25rem; }
         .workspace-page-title {
-            margin: 0 0 .22rem !important;
+            margin: 0 0 .5rem !important;
             color: #182033;
             font-size: 1.45rem !important;
             font-weight: 750 !important;
@@ -1083,17 +1126,17 @@ def _apply_ios_reference_overrides() -> None:
             line-height: 1.15;
         }
         .workspace-page-desc { margin: 0; color: #667085; font-size: .7rem; }
-        .stat-card-grid { flex-wrap:nowrap; margin: 0 0 1rem; padding: 0; border-radius: 14px; }
+        .stat-card-grid { flex-wrap:nowrap; margin: 0 0 1.45rem; padding: 0; border-radius: 14px; }
         .stat-card { min-height: 66px; padding: .72rem 1rem; }
         .stat-card-label { margin-bottom: .24rem; font-size: .61rem; }
         .stat-card-value { font-size: 1.33rem; line-height: 1.05; }
 
         /* Exact tab composition used by the supplied iOS screens */
-        .section-kicker { margin-bottom: .25rem; font-size: .64rem; letter-spacing: .09em; }
+        .section-kicker { margin-bottom: .42rem; font-size: .64rem; letter-spacing: .09em; }
         .section-kicker::before { width: 20px; }
-        .section-title { margin-bottom: .2rem; font-size: 1.27rem; line-height: 1.16; }
+        .section-title { margin-bottom: .38rem; font-size: 1.27rem; line-height: 1.16; }
         .section-desc { max-width: 600px; font-size: .69rem; line-height: 1.42; }
-        .section-desc { margin-bottom: .72rem; }
+        .section-desc { margin-bottom: 1.1rem; }
         .reference-card {
             overflow: hidden;
             border: 1px solid #E7EAF0;
@@ -1111,13 +1154,13 @@ def _apply_ios_reference_overrides() -> None:
         .reference-kpi-value { margin-top: .25rem; font-size: 1.25rem; font-weight: 800; line-height: 1; }
 
         /* Salary intelligence panel */
-        .salary-intel { margin-top: .78rem; }
+        .salary-intel { margin-top: 1.15rem; }
         .st-key-salary-intelligence-card {
-            overflow: hidden; margin-top: .78rem; border: 1px solid #E7EAF0; border-radius: 14px;
+            overflow: hidden; margin-top: 1.15rem; border: 1px solid #E7EAF0; border-radius: 14px;
             background: #FFFFFF; box-shadow: 0 1px 3px rgba(15, 23, 42, .10);
         }
         .st-key-employee-picker > div,
-        .st-key-employee-picker [data-testid="stVerticalBlock"] { gap: .3rem !important; }
+        .st-key-employee-picker [data-testid="stVerticalBlock"] { gap: .65rem !important; }
         .st-key-employee-picker .section-divider-thin { display:none; }
         .st-key-salary-intelligence-card > div,
         .st-key-salary-intelligence-card [data-testid="stVerticalBlock"] { gap: 0 !important; }
@@ -1164,11 +1207,11 @@ def _apply_ios_reference_overrides() -> None:
         .st-key-team-condition-levels { margin-top: -1px; border-radius: 0 0 14px 14px; padding-top: .2rem; }
         .st-key-team-condition-card [data-testid="stVerticalBlock"],
         .st-key-team-condition-levels [data-testid="stVerticalBlock"] { gap: .55rem; }
-        .st-key-team-simulation-card { margin-top: .75rem; }
+        .st-key-team-simulation-card { margin-top: 1.1rem; }
         .st-key-team-scatter-card, .st-key-team-radar-card { min-height: 255px; padding-bottom: .2rem; }
         .st-key-team-scatter-card [data-testid="stPlotlyChart"],
         .st-key-team-radar-card [data-testid="stPlotlyChart"] { border: 0; box-shadow: none; }
-        .team-roster-card { margin-bottom: .7rem; }
+        .team-roster-card { margin-bottom: 1rem; }
         .team-roster-head { padding: .85rem 1rem; border-bottom: 1px solid #F2F4F7; }
         .team-table { width: 100%; border-collapse: collapse; font-size: .67rem; }
         .team-table th { padding: .62rem 1rem; color: #98A2B3; font-weight: 500; text-align: left; }
@@ -1179,11 +1222,11 @@ def _apply_ios_reference_overrides() -> None:
         .risk-chip.safe { color: #079455; background: #ECFDF3; }
         .risk-chip.warning { color: #DC6803; background: #FFFAEB; }
         .risk-chip.danger { color: #D92D20; background: #FEF3F2; }
-        .team-chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; margin-top: .7rem; }
+        .team-chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem; }
         .team-chart-card { min-height: 240px; padding: .85rem 1rem; }
 
         /* Actions and stability */
-        .st-key-actions-filter-row { margin-top: .75rem; }
+        .st-key-actions-filter-row { margin-top: 1.05rem; margin-bottom:.8rem; }
         .st-key-actions-filter-row [data-testid="stHorizontalBlock"] { align-items: end; }
         .st-key-actions-filter-row [data-testid="stVerticalBlock"] { gap: .15rem; }
         .st-key-subtabbar-hr_actions_tab { margin-top:.55rem; padding:0; border-bottom:1px solid #EAECF0; border-radius:0; background:transparent; }
@@ -1197,7 +1240,7 @@ def _apply_ios_reference_overrides() -> None:
         .health-score-value { margin: .2rem 0; color: #111827; font-size: 3.65rem; font-weight: 800; line-height: 1; }
         .health-score-note { margin-top: .55rem; color: #98A2B3; font-size: .56rem; }
         .health-driver-card { margin-top: .75rem; padding: .95rem 1rem; }
-        .st-key-health-driver-card { margin-top: .75rem; padding: .95rem 1rem; border: 1px solid #E7EAF0; border-radius: 14px; background:#FFF; box-shadow:0 1px 3px rgba(15,23,42,.10); }
+        .st-key-health-driver-card { margin-top: 1rem; padding: 1.1rem 1.15rem; border: 1px solid #E7EAF0; border-radius: 14px; background:#FFF; box-shadow:0 1px 3px rgba(15,23,42,.10); }
         .st-key-health-driver-card [data-testid="stVerticalBlock"] { gap: .2rem; }
         .health-driver-card .hbar-chart { padding: .65rem 0 0; border: 0; box-shadow: none; }
         .st-key-health-driver-card .hbar-chart { padding: .5rem 0 0; border: 0; box-shadow: none; }
@@ -1223,6 +1266,7 @@ def _apply_ios_reference_overrides() -> None:
             .block-container { width: min(calc(100vw - 20px), 1024px); }
             .st-key-workspace-navigation { padding-inline: 10px; }
             .workspace-status { display: none; }
+            .st-key-workspace-navigation [data-testid="stHorizontalBlock"] { flex-wrap:nowrap !important; }
             .stat-card-grid { display: grid; grid-template-columns: 1fr 1fr; }
             .stat-card { min-height: 70px; }
             .stat-card:nth-child(2) { border-right: 0; }
@@ -1280,46 +1324,30 @@ def top_navigation(role: str | None = None) -> None:
 
 
 def workspace_navigation(role: str) -> None:
-    """워크스페이스 전용 iOS 헤더: 역할 전환·상태·나가기 기능을 제공한다."""
+    """워크스페이스 전용 헤더: 홈 로고와 HR/DV 역할 전환만 제공한다."""
 
     with st.container(key="workspace-navigation"):
-        brand_col, hr_col, admin_col, status_col, exit_col = st.columns(
-            [2.7, .72, .72, 1.55, .68],
-            vertical_alignment="center",
+        st.markdown(
+            '<a class="workspace-brand" href="/" target="_self" aria-label="홈으로 이동">STAYON</a>',
+            unsafe_allow_html=True,
         )
-        with brand_col:
-            st.markdown('<div class="workspace-brand">STAYON</div>', unsafe_allow_html=True)
-        with hr_col:
-            if st.button(
-                "HR TEAM",
-                key="workspace_role_hr",
-                type="primary" if role == "hr" else "secondary",
-                width="stretch",
-            ):
-                st.session_state["role"] = "hr"
-                if st.session_state.get("workspace_tab") == "models":
-                    st.session_state["workspace_tab"] = "salary"
-                st.rerun()
-        with admin_col:
-            if st.button(
-                "ADMIN",
-                key="workspace_role_admin",
-                type="primary" if role == "admin" else "secondary",
-                width="stretch",
-            ):
-                st.session_state["role"] = "admin"
-                st.session_state["workspace_tab"] = "models"
-                st.rerun()
-        with status_col:
-            st.markdown(
-                '<div class="workspace-status">SYSTEM OPERATIONAL</div>',
-                unsafe_allow_html=True,
-            )
-        with exit_col:
-            if st.button("← 나가기", key="workspace-exit", type="secondary", width="stretch"):
-                st.session_state["role"] = None
+        if st.button(
+            "HR",
+            key="workspace_role_hr",
+            type="primary" if role == "hr" else "secondary",
+        ):
+            st.session_state["role"] = "hr"
+            if st.session_state.get("workspace_tab") == "models":
                 st.session_state["workspace_tab"] = "salary"
-                st.switch_page("main.py")
+            st.rerun()
+        if st.button(
+            "DV",
+            key="workspace_role_admin",
+            type="primary" if role == "admin" else "secondary",
+        ):
+            st.session_state["role"] = "admin"
+            st.session_state["workspace_tab"] = "models"
+            st.rerun()
 
 
 def home_button() -> None:
