@@ -7,7 +7,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import GridSearchCV, train_test_split
 from sklearn.metrics import classification_report, roc_auc_score
 
-from src.utils import RANDOM_STATE, TARGET_COLUMN
+from src.utils.constants import RANDOM_STATE, TARGET_COLUMN
 
 # 프로젝트 최상위 경로 설정
 PROJECT_ROOT = Path(__file__).resolve().parents[3]

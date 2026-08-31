@@ -1,20 +1,64 @@
-from src.config import PROCESSED_DIR
-from src.data.loader import load_raw_test, load_raw_train
-from src.data.preprocess import preprocess_pipeline
+"""퇴사 예측 결과를 MySQL에 저장하는 실행 스크립트."""
+
+import os
+
+import pymysql
+from dotenv import load_dotenv
+
+from src.data.prediction import (
+    INSERT_PREDICTION_SQL,
+    create_employee_predictions,
+    prediction_rows,
+)
 
 
-def main():
-    train_raw = load_raw_train()
-    test_raw = load_raw_test()
+def get_db_connection():
+    """환경 변수에 설정된 MySQL 연결을 생성한다."""
 
-    train_processed = preprocess_pipeline(train_raw)
-    test_processed = preprocess_pipeline(test_raw, reference=train_raw)
+    load_dotenv()
 
-    train_processed.to_csv(PROCESSED_DIR / "train_processed.csv", index=False)
-    test_processed.to_csv(PROCESSED_DIR / "test_processed.csv", index=False)
+    required_variables = ("DB_HOST", "DB_USERNAME", "DB_PASSWORD", "DB_DATABASE")
+    missing_variables = [name for name in required_variables if not os.getenv(name)]
+    if missing_variables:
+        raise ValueError(
+            "DB 환경 변수가 설정되지 않았습니다: " + ", ".join(missing_variables)
+        )
 
-    print("train_processed shape:", train_processed.shape)
-    print("test_processed shape:", test_processed.shape)
+    return pymysql.connect(
+        host=os.environ["DB_HOST"],
+        user=os.environ["DB_USERNAME"],
+        password=os.environ["DB_PASSWORD"],
+        database=os.environ["DB_DATABASE"],
+        port=int(os.getenv("DB_PORT", "3306").strip()),
+        charset="utf8mb4",
+    )
+
+
+def insert_employee_attrition_predictions() -> int:
+    """test.csv 전체 직원의 퇴사 확률을 DB에 저장한다."""
+
+    predictions = create_employee_predictions()
+    rows = prediction_rows(predictions)
+
+    connection = get_db_connection()
+    cursor = None
+    try:
+        cursor = connection.cursor()
+        cursor.executemany(INSERT_PREDICTION_SQL, rows)
+        connection.commit()
+        return cursor.rowcount
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        if cursor is not None:
+            cursor.close()
+        connection.close()
+
+
+def main() -> None:
+    inserted_count = insert_employee_attrition_predictions()
+    print(f"퇴사 예측 INSERT 완료: {inserted_count}건")
 
 
 if __name__ == "__main__":

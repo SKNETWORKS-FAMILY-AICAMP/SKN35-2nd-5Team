@@ -12,7 +12,7 @@ from sklearn.metrics import (
 )
 from torch.utils.data import DataLoader, TensorDataset
 
-from src.data.loader import load_processed_test
+from src.data.loader import load_processed_test_from_db
 from src.models.dl.mlp_model import MLPClassifier
 from src.utils.paths import (
     DL_ARTIFACTS_DIR,
@@ -361,7 +361,8 @@ def main():
     # 2. Test 데이터 로드
     # ==========================================================================
 
-    test_df = load_processed_test()
+    print("\n[ Data Source ] DB (employee_attrition_processed, type='test')")
+    test_df = load_processed_test_from_db()
 
     X_test, y_test = prepare_test_data(
         test_df,

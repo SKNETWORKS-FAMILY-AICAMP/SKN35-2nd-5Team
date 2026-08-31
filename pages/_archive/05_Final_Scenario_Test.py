@@ -1,17 +1,20 @@
 from math import ceil
 from pathlib import Path
 
-import joblib
 import numpy as np
 import pandas as pd
 import streamlit as st
 
-from src.data.loader import load_processed_train, load_raw_test, load_raw_train
-from src.data.preprocess import preprocess_pipeline
-from streamlit_ui import apply_page_style, home_button, page_header
+from src.data.loader import load_raw_test, load_raw_train
+from src.data.prediction import (
+    attrition_probability,
+    load_prediction_model,
+    prepare_model_input,
+)
+from streamlit_ui import apply_page_style, page_header, top_navigation
 from wheel_picker import wheel_picker_component
 
-st.set_page_config(page_title="퇴사 위험 시나리오", layout="wide")
+st.set_page_config(page_title="퇴사 위험 시나리오", page_icon="✨", layout="wide")
 
 MODEL_PATH = Path("artifacts/ml/best_ml_model.joblib")
 ACTIONABLE_FEATURES = [
@@ -68,72 +71,14 @@ VALUE_LABELS = {
 
 
 @st.cache_data
-def load_data() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    return load_raw_train(), load_raw_test(), load_processed_train()
+def load_data() -> tuple[pd.DataFrame, pd.DataFrame]:
+    return load_raw_train(), load_raw_test()
 
 
 @st.cache_resource
 def load_model(path: str, modified_time: float):
     del modified_time
-    return joblib.load(path)
-
-
-def prepare_model_input(
-    raw_frame: pd.DataFrame,
-    raw_train: pd.DataFrame,
-    processed_train: pd.DataFrame,
-    feature_names: list[str],
-) -> pd.DataFrame:
-    """원본 입력을 학습 때와 같은 40개 전처리 피처로 변환한다."""
-
-    typed_frame = raw_frame.copy()
-    for column in typed_frame.columns.intersection(raw_train.columns):
-        if pd.api.types.is_numeric_dtype(raw_train[column]):
-            typed_frame[column] = pd.to_numeric(typed_frame[column], errors="raise")
-
-    processed = preprocess_pipeline(typed_frame, reference=raw_train.copy())
-    processed = processed.drop(columns=["Attrition", "Unnamed: 0"], errors="ignore")
-    if set(feature_names).issubset(processed.columns):
-        return processed.reindex(columns=feature_names)
-
-    processed_reference = processed_train.drop(columns=["Attrition", "Unnamed: 0"], errors="ignore")
-    categorical_columns = processed_reference.select_dtypes(exclude="number").columns.tolist()
-    for column in categorical_columns:
-        categories = sorted(processed_reference[column].dropna().unique().tolist())
-        processed[column] = pd.Categorical(processed[column], categories=categories)
-    encoded = pd.get_dummies(
-        processed,
-        columns=categorical_columns,
-        drop_first=True,
-        dtype=int,
-    )
-    raw_columns = sorted(raw_frame.columns, key=len, reverse=True)
-    for feature in feature_names:
-        if feature in encoded.columns:
-            continue
-        source_column = next(
-            (column for column in raw_columns if feature.startswith(f"{column}_")),
-            None,
-        )
-        if source_column is None:
-            continue
-        category = feature.removeprefix(f"{source_column}_")
-        normalized = (
-            raw_frame[source_column].astype("string").str.strip().str.replace("'", "’", regex=False)
-        )
-        encoded[feature] = normalized.eq(category).astype(int).to_numpy()
-
-    missing = [feature for feature in feature_names if feature not in encoded.columns]
-    if missing:
-        raise ValueError("전처리 후 누락된 입력 항목: " + ", ".join(missing))
-    return encoded.reindex(columns=feature_names)
-
-
-def attrition_probability(model, frame: pd.DataFrame) -> float:
-    classes = list(model.classes_)
-    if 1 not in classes:
-        raise ValueError("모델 클래스에 퇴사 라벨 1이 없습니다.")
-    return float(model.predict_proba(frame)[0, classes.index(1)])
+    return load_prediction_model(path)
 
 
 def wheel_options(reference: pd.Series, current: int | float) -> list[int | float]:
@@ -166,10 +111,10 @@ def wheel_picker(
 
 
 apply_page_style()
-home_button()
+top_navigation("attrition")
 page_header(
     "조건 변화 모의실험",
-    "퇴사 위험 시나리오",
+    "퇴사 위험 시나리오 ✨",
     "직원의 업무 조건을 조금씩 조정해 모델이 예상하는 퇴사 확률 변화를 살펴봐요.",
 )
 
@@ -179,7 +124,7 @@ if not MODEL_PATH.exists():
     st.stop()
 
 try:
-    train_data, test_data, processed_train = load_data()
+    train_data, test_data = load_data()
     model = load_model(str(MODEL_PATH), MODEL_PATH.stat().st_mtime)
 except Exception as exc:
     st.error(f"모델 또는 데이터를 불러오지 못했어요: {exc}")
@@ -258,13 +203,12 @@ if submitted:
         baseline_input = prepare_model_input(
             source_row.to_frame().T,
             train_data,
-            processed_train,
             feature_names,
         )
+
         adjusted_input = prepare_model_input(
             adjusted_row.to_frame().T,
             train_data,
-            processed_train,
             feature_names,
         )
         before_probability = attrition_probability(model, baseline_input)
@@ -278,16 +222,15 @@ if submitted:
     after_label = "고위험" if after_probability >= threshold else "저위험"
 
     st.subheader("비교 결과")
-    with st.container(key="stat-bar"):
-        result_metrics = st.columns(3)
-        result_metrics[0].metric("조정 전", f"{before_probability:.1%}", before_label)
-        result_metrics[1].metric(
-            "조정 후",
-            f"{after_probability:.1%}",
-            delta=f"{probability_delta:+.1%}",
-            delta_color="inverse",
-        )
-        result_metrics[2].metric("현재 판정", after_label)
+    result_metrics = st.columns(3)
+    result_metrics[0].metric("조정 전", f"{before_probability:.1%}", before_label)
+    result_metrics[1].metric(
+        "조정 후",
+        f"{after_probability:.1%}",
+        delta=f"{probability_delta:+.1%}",
+        delta_color="inverse",
+    )
+    result_metrics[2].metric("현재 판정", after_label)
 
     result = pd.DataFrame(
         {
