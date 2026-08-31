@@ -138,6 +138,11 @@ if st.session_state["workspace_tab"] not in {key for key, _ in TAB_OPTIONS}:
     st.session_state["workspace_tab"] = "salary"
 
 with st.container(key="tabbar-workspace"):
+    tab_count = len(TAB_OPTIONS)
+    st.markdown(
+        f'<span class="workspace-tab-state tabs-{tab_count} is-{st.session_state["workspace_tab"]}"></span>',
+        unsafe_allow_html=True,
+    )
     tab_columns = st.columns(len(TAB_OPTIONS))
     for column, (key, label) in zip(tab_columns, TAB_OPTIONS, strict=False):
         with column:

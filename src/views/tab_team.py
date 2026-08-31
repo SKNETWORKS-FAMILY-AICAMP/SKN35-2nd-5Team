@@ -216,7 +216,7 @@ def render(employees: pd.DataFrame) -> None:
             unsafe_allow_html=True,
         )
 
-        chart_left, chart_right = st.columns(2, gap="small")
+        chart_left, chart_right = st.columns(2, gap="medium")
         with chart_left:
             with st.container(key="team-scatter-card"):
                 st.markdown('<div class="reference-label">팀원별 인재가치 vs 퇴사 위험도</div>', unsafe_allow_html=True)

@@ -37,7 +37,6 @@ with left:
         st.markdown(
             """
             <div class="role-card">
-                <div class="role-card-icon">🧑‍💼</div>
                 <div class="role-card-subtitle">Human Resources</div>
                 <div class="role-card-title">HR Team으로 접속</div>
                 <div class="role-card-desc">
@@ -54,7 +53,7 @@ with left:
             """,
             unsafe_allow_html=True,
         )
-        if st.button("HR Team으로 시작하기", key="role_hr_btn", type="primary", width="stretch"):
+        if st.button("HR Team으로 접속", key="role_hr_btn", width="stretch"):
             st.session_state["role"] = "hr"
             st.session_state["workspace_tab"] = "salary"
             st.switch_page("pages/01_Workspace.py")
@@ -64,7 +63,6 @@ with right:
         st.markdown(
             """
             <div class="role-card">
-                <div class="role-card-icon">🛠️</div>
                 <div class="role-card-subtitle">Technology &amp; Management</div>
                 <div class="role-card-title">Admin으로 접속</div>
                 <div class="role-card-desc">
@@ -81,40 +79,10 @@ with right:
             """,
             unsafe_allow_html=True,
         )
-        if st.button("Admin으로 시작하기", key="role_admin_btn", type="primary", width="stretch"):
+        if st.button("Admin으로 접속", key="role_admin_btn", width="stretch"):
             st.session_state["role"] = "admin"
             st.session_state["workspace_tab"] = "models"
             st.switch_page("pages/01_Workspace.py")
-
-# 두 카드 높이 맞추기: Streamlit이 컬럼 내부를 여러 겹의 flex/block 래퍼로 감싸는
-# 방식 때문에, 순수 CSS(flex-grow, align-items: stretch)만으로는 "HR Team으로 접속"
-# 카드와 "Admin으로 접속" 카드처럼 내용 길이가 다른 두 카드의 높이를 안정적으로
-# 맞출 수 없었다. 대신 렌더 후 실제 카드 높이를 JS로 측정해서 더 큰 쪽에 맞춰
-# min-height를 직접 지정한다. 화면 폭이 바뀌어 줄바꿈 수가 달라져도 resize 때마다
-# 다시 계산하므로 항상 두 "시작하기" 버튼이 같은 줄에 나란히 놓인다.
-st.html(
-    """
-    <script>
-    function equalizeRoleCards() {
-        const doc = window.parent.document;
-        const cards = doc.querySelectorAll('.role-card');
-        if (cards.length < 2) return;
-        cards.forEach((c) => { c.style.minHeight = '0px'; });
-        let maxHeight = 0;
-        cards.forEach((c) => { maxHeight = Math.max(maxHeight, c.getBoundingClientRect().height); });
-        cards.forEach((c) => { c.style.minHeight = maxHeight + 'px'; });
-    }
-    equalizeRoleCards();
-    setTimeout(equalizeRoleCards, 150);
-    setTimeout(equalizeRoleCards, 500);
-    if (!window.parent.__roleCardResizeBound) {
-        window.parent.__roleCardResizeBound = true;
-        window.parent.addEventListener('resize', () => setTimeout(equalizeRoleCards, 80));
-    }
-    </script>
-    """,
-    unsafe_allow_javascript=True,
-)
 
 st.markdown(
     '<div class="section-divider-thin"></div>'

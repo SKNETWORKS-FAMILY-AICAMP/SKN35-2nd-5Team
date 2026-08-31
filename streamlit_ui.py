@@ -584,18 +584,52 @@ def _apply_page_style_part3() -> None:
             opacity: 0; transition: opacity .35s ease;
             pointer-events: none;
         }
-        div[class*="st-key-role-panel-"] .role-card { margin-bottom: 1rem; }
+        /* 역할 카드는 전체 영역이 하나의 버튼처럼 동작한다. 실제 Streamlit 버튼은
+           투명 오버레이로 남겨 페이지 전환과 키보드 접근성을 그대로 유지한다. */
+        div[class*="st-key-role-panel-"] {
+            position: relative;
+            cursor: pointer;
+            border-radius: var(--r-xl);
+            gap: 0 !important;
+        }
+        div[class*="st-key-role-panel-"] .role-card { margin-bottom: 0; }
         div[class*="st-key-role-panel-"]:hover .role-card {
             transform: translateY(-6px) scale(1.008);
             box-shadow: var(--shadow-lg);
             border-color: rgba(0, 113, 227, .35);
         }
+        div[class*="st-key-role-panel-"]:active .role-card {
+            transform: translateY(-2px) scale(.998);
+            transition-duration: .1s;
+        }
+        div[class*="st-key-role-panel-"]:focus-within .role-card {
+            border-color: rgba(0, 113, 227, .5);
+            box-shadow: 0 0 0 4px rgba(0, 113, 227, .1), var(--shadow-lg);
+        }
         div[class*="st-key-role-panel-"]:hover .role-card::before { opacity: 1; }
-        .role-card-icon {
-            width: 3.3rem; height: 3.3rem; display: flex; align-items: center; justify-content: center;
-            font-size: 1.55rem; border-radius: 30%;
-            background: linear-gradient(155deg, var(--blue-soft), rgba(0,113,227,.02));
-            margin-bottom: 1.4rem;
+        div[class*="st-key-role-panel-"] div[class*="st-key-role_"][class*="_btn"] {
+            position: absolute;
+            inset: 0 0 -1rem;
+            z-index: 5;
+            margin: 0;
+        }
+        div[class*="st-key-role-panel-"] div[class*="st-key-role_"][class*="_btn"] .stButton,
+        div[class*="st-key-role-panel-"] div[class*="st-key-role_"][class*="_btn"] .stButton > button {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            min-height: 100%;
+            margin: 0;
+        }
+        div[class*="st-key-role-panel-"] div[class*="st-key-role_"][class*="_btn"] .stButton > button {
+            border: 0 !important;
+            border-radius: var(--r-xl) !important;
+            background: transparent !important;
+            box-shadow: none !important;
+            color: transparent !important;
+            cursor: pointer;
+            opacity: 0;
         }
         .role-card-title { font-size: 1.5rem; font-weight: 700; letter-spacing: -.02em; margin-bottom: .4rem; }
         .role-card-subtitle { font-size: .82rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--blue); margin-bottom: 1rem; }
@@ -958,8 +992,10 @@ def _apply_ios_reference_overrides() -> None:
             box-shadow: 0 8px 32px rgba(15, 23, 42, .12), inset 0 1px 0 #FFFFFF;
         }
         div[class*="st-key-tabbar-"] [data-testid="stHorizontalBlock"] {
-            gap: 3px;
+            gap: 0;
             flex-wrap: nowrap !important;
+            position: relative;
+            z-index: 2;
         }
         div[class*="st-key-tabbar-"] [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {
             flex: 1 1 0 !important;
@@ -977,13 +1013,40 @@ def _apply_ios_reference_overrides() -> None:
         }
         div[class*="st-key-tabbar-"] .stButton > button[kind="primary"] {
             color: var(--blue);
-            background: rgba(255, 255, 255, .96);
-            box-shadow: 0 2px 12px rgba(15, 23, 42, .12), inset 0 1px 0 #FFFFFF;
+            background: transparent;
+            box-shadow: none;
         }
         div[class*="st-key-tabbar-"] .stButton > button[kind="secondary"] {
             color: #8E8E93;
             background: transparent;
         }
+        div[class*="st-key-tabbar-"]::after {
+            content:"";
+            position:absolute;
+            top:6px;
+            bottom:6px;
+            left:6px;
+            z-index:1;
+            width:calc((100% - 12px) / var(--tab-count, 4));
+            border-radius:16px;
+            background:rgba(255,255,255,.97);
+            box-shadow:0 2px 13px rgba(15,23,42,.13), inset 0 1px 0 #FFF;
+            transform:translateX(calc(var(--tab-index, 0) * 100%));
+            transition:transform .42s cubic-bezier(.34,1.32,.64,1), width .3s ease;
+            will-change:transform;
+            pointer-events:none;
+        }
+        div[class*="st-key-tabbar-"]:has(.workspace-tab-state.tabs-4) { --tab-count:4; }
+        div[class*="st-key-tabbar-"]:has(.workspace-tab-state.tabs-5) { --tab-count:5; }
+        div[class*="st-key-tabbar-"]:has(.workspace-tab-state.is-salary) { --tab-index:0; }
+        div[class*="st-key-tabbar-"]:has(.workspace-tab-state.is-team) { --tab-index:1; }
+        div[class*="st-key-tabbar-"]:has(.workspace-tab-state.is-actions) { --tab-index:2; }
+        div[class*="st-key-tabbar-"]:has(.workspace-tab-state.is-stability) { --tab-index:3; }
+        div[class*="st-key-tabbar-"]:has(.workspace-tab-state.is-models) { --tab-index:4; }
+        div[class*="st-key-tabbar-"] .stButton > button {
+            transition:color .25s ease, transform .18s ease !important;
+        }
+        div[class*="st-key-tabbar-"] .stButton > button:active { transform:scale(.96); }
         div[data-baseweb="popover"], div[data-baseweb="menu"] {
             z-index: 2147482000 !important;
         }
@@ -1051,6 +1114,7 @@ def _apply_ios_reference_overrides() -> None:
         .hero-title { font-size: clamp(2.4rem, 5vw, 3.35rem); color: var(--ink); }
         .hero-desc { max-width: 600px; color: #6B7280; font-size: .92rem; }
         .role-card {
+            height: auto;
             min-height: 390px;
             padding: 2rem 2rem 1.5rem;
             border-radius: 24px;
@@ -1067,12 +1131,21 @@ def _apply_ios_reference_overrides() -> None:
             padding-bottom: 7.5rem;
         }
         .stApp:has(.st-key-workspace-navigation) .block-container > [data-testid="stVerticalBlock"] {
-            gap: 0 !important;
+            gap: 1rem !important;
+        }
+        .stApp:has(.st-key-workspace-navigation) .block-container > [data-testid="stVerticalBlock"]
+        > [data-testid="stElementContainer"]:has(style) {
+            display: none !important;
         }
         .st-key-workspace-navigation {
             min-height: 42px;
-            margin: 0 calc(50% - 50vw) .45rem;
+            left: auto;
+            width: 100vw !important;
+            max-width: none !important;
+            margin: 0 0 .75rem calc(50% - 50vw);
             padding: 4px max(13px, calc((100vw - 1024px) / 2));
+            box-sizing: border-box;
+            transform: none;
         }
         .st-key-workspace-navigation > div,
         .st-key-workspace-navigation [data-testid="stVerticalBlock"] { gap: 0 !important; }
@@ -1102,10 +1175,49 @@ def _apply_ios_reference_overrides() -> None:
             width: 42px !important;
             min-width: 42px !important;
         }
-        .st-key-workspace-navigation div[class*="st-key-workspace_role_hr"] { right: 60px; }
-        .st-key-workspace-navigation div[class*="st-key-workspace_role_admin"] { right: 13px; }
+        .st-key-workspace-navigation div[class*="st-key-workspace_role_hr"] {
+            right: calc(max(13px, calc((100vw - 1024px) / 2)) + 47px);
+        }
+        .st-key-workspace-navigation div[class*="st-key-workspace_role_admin"] {
+            right: max(13px, calc((100vw - 1024px) / 2));
+        }
         .st-key-workspace-navigation div[class*="st-key-workspace_role_hr"] .stButton,
         .st-key-workspace-navigation div[class*="st-key-workspace_role_admin"] .stButton { width:42px !important; }
+        .workspace-role-state, .workspace-tab-state { display:none !important; }
+        div[class*="st-key-tabbar-"] [data-testid="stElementContainer"]:has(.workspace-tab-state) {
+            display:none !important;
+        }
+        .st-key-workspace-navigation::before,
+        .st-key-workspace-navigation::after {
+            content:"";
+            position:absolute;
+            pointer-events:none;
+            border-radius:999px;
+        }
+        .st-key-workspace-navigation::before {
+            top:5px;
+            right:max(13px, calc((100vw - 1024px) / 2));
+            z-index:1;
+            width:89px;
+            height:31px;
+            border:.5px solid rgba(0,0,0,.06);
+            background:rgba(120,120,128,.12);
+        }
+        .st-key-workspace-navigation::after {
+            top:7px;
+            right:calc(max(13px, calc((100vw - 1024px) / 2)) + 47px);
+            z-index:2;
+            width:42px;
+            height:27px;
+            background:rgba(255,255,255,.98);
+            box-shadow:0 1px 7px rgba(15,23,42,.14), inset 0 .5px 0 #FFF;
+            transform:translateX(0);
+            transition:transform .38s cubic-bezier(.34,1.35,.64,1), box-shadow .25s ease;
+            will-change:transform;
+        }
+        .st-key-workspace-navigation:has(.workspace-role-state.is-admin)::after {
+            transform:translateX(47px);
+        }
         .workspace-status { font-size: .58rem; gap: .35rem; }
         .workspace-status::before { width: 6px; height: 6px; }
         .st-key-workspace-navigation .stButton > button {
@@ -1115,10 +1227,17 @@ def _apply_ios_reference_overrides() -> None:
             font-size: .58rem;
             min-width: 0;
             white-space: nowrap;
+            background:transparent !important;
+            border-color:transparent !important;
+            box-shadow:none !important;
+            transition:color .25s ease, transform .18s ease !important;
         }
-        .st-key-workspace-page-header { margin: .65rem 0 1.25rem; }
+        .st-key-workspace-navigation .stButton > button[kind="primary"] { color:#2563EB !important; }
+        .st-key-workspace-navigation .stButton > button[kind="secondary"] { color:#7C8493 !important; }
+        .st-key-workspace-navigation .stButton > button:active { transform:scale(.93); }
+        .st-key-workspace-page-header { margin: 1.35rem 0 1.75rem; }
         .workspace-page-title {
-            margin: 0 0 .5rem !important;
+            margin: 0 0 .7rem !important;
             color: #182033;
             font-size: 1.45rem !important;
             font-weight: 750 !important;
@@ -1126,17 +1245,17 @@ def _apply_ios_reference_overrides() -> None:
             line-height: 1.15;
         }
         .workspace-page-desc { margin: 0; color: #667085; font-size: .7rem; }
-        .stat-card-grid { flex-wrap:nowrap; margin: 0 0 1.45rem; padding: 0; border-radius: 14px; }
+        .stat-card-grid { flex-wrap:nowrap; margin: 0 0 2rem; padding: 0; border-radius: 14px; }
         .stat-card { min-height: 66px; padding: .72rem 1rem; }
         .stat-card-label { margin-bottom: .24rem; font-size: .61rem; }
         .stat-card-value { font-size: 1.33rem; line-height: 1.05; }
 
         /* Exact tab composition used by the supplied iOS screens */
-        .section-kicker { margin-bottom: .42rem; font-size: .64rem; letter-spacing: .09em; }
+        .section-kicker { margin-bottom: .58rem; font-size: .64rem; letter-spacing: .09em; }
         .section-kicker::before { width: 20px; }
-        .section-title { margin-bottom: .38rem; font-size: 1.27rem; line-height: 1.16; }
+        .section-title { margin-bottom: .55rem; font-size: 1.27rem; line-height: 1.16; }
         .section-desc { max-width: 600px; font-size: .69rem; line-height: 1.42; }
-        .section-desc { margin-bottom: 1.1rem; }
+        .section-desc { margin-bottom: 1.5rem; }
         .reference-card {
             overflow: hidden;
             border: 1px solid #E7EAF0;
@@ -1148,15 +1267,19 @@ def _apply_ios_reference_overrides() -> None:
         .reference-card-subtitle { color: #98A2B3; font-size: .61rem; }
         .reference-label { color: #98A2B3; font-size: .58rem; font-weight: 600; letter-spacing: .02em; }
         .reference-value { color: #182033; font-size: .73rem; font-weight: 650; }
-        .reference-grid-2 { display: grid; grid-template-columns: minmax(220px, .9fr) minmax(0, 2.1fr); gap: .85rem; }
-        .reference-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: .7rem; }
+        .reference-grid-2 { display: grid; grid-template-columns: minmax(220px, .9fr) minmax(0, 2.1fr); gap: 1.2rem; }
+        .reference-kpis {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+        }
         .reference-kpi { padding: .85rem 1rem; }
         .reference-kpi-value { margin-top: .25rem; font-size: 1.25rem; font-weight: 800; line-height: 1; }
 
         /* Salary intelligence panel */
-        .salary-intel { margin-top: 1.15rem; }
+        .salary-intel { margin-top: 1.45rem; }
         .st-key-salary-intelligence-card {
-            overflow: hidden; margin-top: 1.15rem; border: 1px solid #E7EAF0; border-radius: 14px;
+            overflow: hidden; margin-top: 1.45rem; border: 1px solid #E7EAF0; border-radius: 14px;
             background: #FFFFFF; box-shadow: 0 1px 3px rgba(15, 23, 42, .10);
         }
         .st-key-employee-picker > div,
@@ -1207,11 +1330,15 @@ def _apply_ios_reference_overrides() -> None:
         .st-key-team-condition-levels { margin-top: -1px; border-radius: 0 0 14px 14px; padding-top: .2rem; }
         .st-key-team-condition-card [data-testid="stVerticalBlock"],
         .st-key-team-condition-levels [data-testid="stVerticalBlock"] { gap: .55rem; }
-        .st-key-team-simulation-card { margin-top: 1.1rem; }
-        .st-key-team-scatter-card, .st-key-team-radar-card { min-height: 255px; padding-bottom: .2rem; }
+        .st-key-team-simulation-card { margin-top: 1.4rem; }
+        .st-key-team-scatter-card, .st-key-team-radar-card {
+            min-height: 255px;
+            margin-top: 1.35rem;
+            padding-bottom: .2rem;
+        }
         .st-key-team-scatter-card [data-testid="stPlotlyChart"],
         .st-key-team-radar-card [data-testid="stPlotlyChart"] { border: 0; box-shadow: none; }
-        .team-roster-card { margin-bottom: 1rem; }
+        .team-roster-card { margin-bottom: 1.3rem; }
         .team-roster-head { padding: .85rem 1rem; border-bottom: 1px solid #F2F4F7; }
         .team-table { width: 100%; border-collapse: collapse; font-size: .67rem; }
         .team-table th { padding: .62rem 1rem; color: #98A2B3; font-weight: 500; text-align: left; }
@@ -1222,11 +1349,11 @@ def _apply_ios_reference_overrides() -> None:
         .risk-chip.safe { color: #079455; background: #ECFDF3; }
         .risk-chip.warning { color: #DC6803; background: #FFFAEB; }
         .risk-chip.danger { color: #D92D20; background: #FEF3F2; }
-        .team-chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem; }
+        .team-chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-top: 1.3rem; }
         .team-chart-card { min-height: 240px; padding: .85rem 1rem; }
 
         /* Actions and stability */
-        .st-key-actions-filter-row { margin-top: 1.05rem; margin-bottom:.8rem; }
+        .st-key-actions-filter-row { margin-top: 1.4rem; margin-bottom:1.1rem; }
         .st-key-actions-filter-row [data-testid="stHorizontalBlock"] { align-items: end; }
         .st-key-actions-filter-row [data-testid="stVerticalBlock"] { gap: .15rem; }
         .st-key-subtabbar-hr_actions_tab { margin-top:.55rem; padding:0; border-bottom:1px solid #EAECF0; border-radius:0; background:transparent; }
@@ -1240,7 +1367,8 @@ def _apply_ios_reference_overrides() -> None:
         .health-score-value { margin: .2rem 0; color: #111827; font-size: 3.65rem; font-weight: 800; line-height: 1; }
         .health-score-note { margin-top: .55rem; color: #98A2B3; font-size: .56rem; }
         .health-driver-card { margin-top: .75rem; padding: .95rem 1rem; }
-        .st-key-health-driver-card { margin-top: 1rem; padding: 1.1rem 1.15rem; border: 1px solid #E7EAF0; border-radius: 14px; background:#FFF; box-shadow:0 1px 3px rgba(15,23,42,.10); }
+        .health-score-card + .reference-kpis { margin-top: 1.25rem !important; }
+        .st-key-health-driver-card { margin-top: 1.35rem; padding: 1.2rem 1.25rem; border: 1px solid #E7EAF0; border-radius: 14px; background:#FFF; box-shadow:0 1px 3px rgba(15,23,42,.10); }
         .st-key-health-driver-card [data-testid="stVerticalBlock"] { gap: .2rem; }
         .health-driver-card .hbar-chart { padding: .65rem 0 0; border: 0; box-shadow: none; }
         .st-key-health-driver-card .hbar-chart { padding: .5rem 0 0; border: 0; box-shadow: none; }
@@ -1328,7 +1456,8 @@ def workspace_navigation(role: str) -> None:
 
     with st.container(key="workspace-navigation"):
         st.markdown(
-            '<a class="workspace-brand" href="/" target="_self" aria-label="홈으로 이동">STAYON</a>',
+            '<a class="workspace-brand" href="/" target="_self" aria-label="홈으로 이동">STAYON</a>'
+            f'<span class="workspace-role-state is-{role}"></span>',
             unsafe_allow_html=True,
         )
         if st.button(
