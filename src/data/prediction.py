@@ -8,6 +8,7 @@ import pandas as pd
 
 from src.data.loader import load_raw_test, load_raw_train
 from src.data.preprocess import preprocess_pipeline
+from src.models.dl.predict import load_mlp_prediction_model
 from src.utils.paths import BEST_ML_MODEL_PATH
 
 # prediction_id는 DB에서 자동 생성하므로 INSERT 대상에서 제외한다.
@@ -21,12 +22,18 @@ INSERT_PREDICTION_SQL = """
 
 
 def load_prediction_model(model_path: str | Path = BEST_ML_MODEL_PATH):
-    """DB 적재와 page5에서 공통으로 사용할 최종 ML 모델을 불러온다."""
+    """보관 화면 등 기존 ML 예측 경로에서 사용할 모델을 불러온다."""
 
     path = Path(model_path)
     if not path.exists():
         raise FileNotFoundError(f"예측 모델을 찾을 수 없습니다: {path}")
     return joblib.load(path)
+
+
+def load_hr_prediction_model():
+    """Recall을 우선하는 HR 업무용 MLP 예측 모델을 불러온다."""
+
+    return load_mlp_prediction_model()
 
 
 def prepare_model_input(
@@ -110,7 +117,7 @@ def create_employee_predictions(
 
     source = load_raw_test() if raw_frame is None else raw_frame.copy()
     reference = load_raw_train() if raw_train is None else raw_train.copy()
-    prediction_model = load_prediction_model() if model is None else model
+    prediction_model = load_hr_prediction_model() if model is None else model
 
     if "Employee ID" not in source.columns:
         raise ValueError("예측 데이터에 'Employee ID' 컬럼이 없습니다.")
@@ -163,6 +170,7 @@ __all__ = [
     "attrition_probability",
     "create_employee_predictions",
     "load_prediction_model",
+    "load_hr_prediction_model",
     "prediction_rows",
     "prepare_model_input",
 ]
