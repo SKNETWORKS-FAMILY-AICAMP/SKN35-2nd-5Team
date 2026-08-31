@@ -1,4 +1,4 @@
-"""퇴사 예측 생성과 DB 적재를 시작하는 실행 파일.
+"""ML/DL 테스트 성능의 DB 적재를 시작하는 실행 파일.
 
 실행 방법:
     uv run python insert_database.py
