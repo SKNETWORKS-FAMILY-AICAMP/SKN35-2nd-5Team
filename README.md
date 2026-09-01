@@ -31,9 +31,9 @@ URL : https://skn35-2nd-5team-ghnprc4w4etel28hrqhdga.streamlit.app/
 |       이름(git ID)        | 담당 (커밋 이력 기준)                                                                       |
 | :-----------------------: | :------------------------------------------------------------------------------------------ |
 | [kimgyeongmin5348](https://github.com/kimgyeongmin5348) / 김경민 | 대시보드 페이지(`pages/`) · ML 모델링(`src/models/ml/`) · README                            |
-| [chan3623](https://github.com/chan3623)                         | 딥러닝 모델(`src/models/dl/`) · Views(`src/views/`) · DB 연동(`src/database/`, `src/data/`) |
-| [inaskn35](https://github.com/inaskn35)                         | ML 모델링(`src/models/ml/`, Random Forest 튜닝)                                             |
-| [juvia2](https://github.com/juvia2)                             | ML 모델링(`src/models/ml/`)                                                                 |
+| [chan3623](https://github.com/chan3623) / 박찬룡                 | 딥러닝 모델(`src/models/dl/`) · Views(`src/views/`) · DB 연동(`src/database/`, `src/data/`) |
+| [inaskn35](https://github.com/inaskn35) / 장인화                 | ML 모델링(`src/models/ml/`, Random Forest 튜닝)                                             |
+| [juvia2](https://github.com/juvia2) / 김연주                     | ML 모델링(`src/models/ml/`)                                                                 |
 
 </div>
 
