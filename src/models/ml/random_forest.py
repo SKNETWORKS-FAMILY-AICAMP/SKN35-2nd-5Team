@@ -1,9 +1,32 @@
-"""랜덤 포레스트 모델 구현 파일.
+import os
+import joblib
+import pandas as pd
+import matplotlib.pyplot as plt
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import classification_report, roc_auc_score
 
-데이터 로딩·분할·평가·저장은 ``train.py``가 공통으로 처리한다.
-이 파일에서는 아래 import를 사용해 ``create_random_forest()``만 구현하면 된다.
-"""
+# 프로젝트 루트 및 저장 경로 설정
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+DATA_PATH = os.path.join(BASE_DIR, "data", "preprocessing")
+ARTIFACTS_PATH = os.path.join(BASE_DIR, "artifacts")
 
-from sklearn.ensemble import RandomForestClassifier  # noqa: F401
+from sklearn.ensemble import RandomForestClassifier 
+from src.utils.constants import RANDOM_STATE 
 
-from .utils import RANDOM_STATE  # noqa: F401
+def create_random_forest():
+    """Random Forest 모델 객체를 생성하여 반환합니다.
+
+    Returns:
+        RandomForestClassifier: 클래스 불균형 및 기본 하이퍼파라미터가 설정된 모델 객체
+    """
+    model = RandomForestClassifier(
+        n_estimators=100,
+        max_depth=10,
+        class_weight="balanced",
+        random_state=RANDOM_STATE,
+        n_jobs=-1,
+    )
+    return model
+
+
