@@ -26,8 +26,6 @@ URL : https://skn35-2nd-5team-ghnprc4w4etel28hrqhdga.streamlit.app/
 
 ### 🏷️ Team **SKN35-2nd-5Team** | Project **STAYON**
 
-> 실명 확인이 어려워 git 커밋 아이디 기준으로 표기했습니다. 담당 영역은 각 아이디의 파일 변경 이력(`git log --author --name-only`) 기준으로 가장 많이 손댄 영역을 표기한 것으로, 실제 역할 분담과 다를 수 있습니다.
-
 |       이름(git ID)        | 담당 (커밋 이력 기준)                                                                       |
 | :-----------------------: | :------------------------------------------------------------------------------------------ |
 | [kimgyeongmin5348](https://github.com/kimgyeongmin5348) / 김경민(PM) | 대시보드 페이지(`pages/`) · ML 모델링(`src/models/ml/`) · README                            |
